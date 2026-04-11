@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>10secondsデッキバトル</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero-panel">
+        <p class="eyebrow">3ターン / 3枚 / 同時選択</p>
+        <h1>10secondsデッキバトル</h1>
+        <p class="hero-copy">
+          5枚から3枚だけ選ぶ。短いのに読み合いが残る、CPU対戦の超短期バトル。
+        </p>
+
+        <div class="hero-stats">
+          <div class="stat-card">
+            <span>プレイヤーHP</span>
+            <strong id="playerHp">10</strong>
+          </div>
+          <div class="stat-card">
+            <span>CPU HP</span>
+            <strong id="cpuHp">10</strong>
+          </div>
+          <div class="stat-card accent">
+            <span>ターン</span>
+            <strong id="turnLabel">準備中</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="game-panel">
+        <div class="phase-banner">
+          <div>
+            <p class="phase-label">現在フェーズ</p>
+            <h2 id="phaseTitle">スキルを3枚選ぶ</h2>
+          </div>
+          <button id="resetButton" class="secondary-button">もう1回</button>
+        </div>
+
+        <p id="statusText" class="status-text">
+          5枚の中から、3ターンで使いたい3枚を選んでください。
+        </p>
+
+        <section>
+          <div class="section-heading">
+            <h3>スキル一覧</h3>
+            <span id="selectionCounter">0 / 3 選択</span>
+          </div>
+          <div id="skillPool" class="skill-grid"></div>
+        </section>
+
+        <section class="battle-layout">
+          <div class="battle-column">
+            <div class="section-heading">
+              <h3>あなたの手札</h3>
+              <span id="playerCharge">溜め: 0</span>
+            </div>
+            <div id="playerHand" class="hand-grid"></div>
+          </div>
+
+          <div class="battle-column">
+            <div class="section-heading">
+              <h3>CPU</h3>
+              <span id="cpuCharge">溜め: 0</span>
+            </div>
+            <div id="cpuHand" class="hand-grid cpu-grid"></div>
+          </div>
+        </section>
+
+        <section class="result-strip">
+          <div>
+            <p class="phase-label">直前の公開</p>
+            <h3 id="revealText">まだバトルは始まっていません</h3>
+          </div>
+          <div class="result-badge" id="resultBadge">READY</div>
+        </section>
+
+        <section class="log-panel">
+          <div class="section-heading">
+            <h3>バトルログ</h3>
+            <span>3ターンで決着</span>
+          </div>
+          <div id="battleLog" class="log-list"></div>
+        </section>
+      </section>
+    </main>
+
+    <template id="skillCardTemplate">
+      <button class="skill-card" type="button">
+        <div class="skill-header">
+          <strong class="skill-name"></strong>
+          <span class="skill-tag"></span>
+        </div>
+        <p class="skill-description"></p>
+      </button>
+    </template>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
