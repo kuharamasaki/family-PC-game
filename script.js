@@ -32,13 +32,12 @@ const SKILLS = [
 ];
 
 const state = {
-  phase: "draft",
+  phase: "battle",
   playerHp: 10,
   cpuHp: 10,
   playerCharge: 0,
   cpuCharge: 0,
-  turn: 0,
-  selectedSkills: [],
+  turn: 1,
   playerHand: [],
   cpuHand: [],
   lastReveal: null,
@@ -66,20 +65,19 @@ const els = {
 };
 
 function resetGame() {
-  state.phase = "draft";
+  state.phase = "battle";
   state.playerHp = 10;
   state.cpuHp = 10;
   state.playerCharge = 0;
   state.cpuCharge = 0;
-  state.turn = 0;
-  state.selectedSkills = [];
-  state.playerHand = [];
-  state.cpuHand = [];
+  state.turn = 1;
+  state.playerHand = SKILLS.map((skill) => ({ id: skill.id, used: false }));
+  state.cpuHand = SKILLS.map((skill) => ({ id: skill.id, used: false }));
   state.lastReveal = null;
   state.logEntries = [
     {
       title: "ゲーム開始",
-      body: "5枚から3枚を選ぶとバトル開始。CPUも同じく3枚をランダムに構築します。",
+      body: "毎ターン、残っているスキルから1枚ずつ選んで即バトルします。使ったスキルはその対戦中は再使用できません。",
     },
   ];
   state.winner = null;
@@ -87,45 +85,10 @@ function resetGame() {
 }
 
 function toggleSkill(skillId) {
-  if (state.phase !== "draft") return;
-
-  const exists = state.selectedSkills.includes(skillId);
-  if (exists) {
-    state.selectedSkills = state.selectedSkills.filter((id) => id !== skillId);
-  } else if (state.selectedSkills.length < 3) {
-    state.selectedSkills = [...state.selectedSkills, skillId];
-  }
-
-  if (state.selectedSkills.length === 3) {
-    startBattle();
-  } else {
-    render();
-  }
-}
-
-function startBattle() {
-  state.phase = "battle";
-  state.turn = 1;
-  state.playerHand = state.selectedSkills.map((id) => ({ id, used: false }));
-  state.cpuHand = buildCpuHand();
-  state.logEntries.unshift({
-    title: "バトル開始",
-    body: `CPUは3枚をセット完了。第${state.turn}ターンの行動を選んでください。`,
-  });
-  render();
-}
-
-function buildCpuHand() {
-  const pool = [...SKILLS];
-  const hand = [];
-
-  while (hand.length < 3) {
-    const remaining = pool.filter((skill) => !hand.includes(skill.id));
-    const randomSkill = remaining[Math.floor(Math.random() * remaining.length)];
-    hand.push(randomSkill.id);
-  }
-
-  return hand.map((id) => ({ id, used: false }));
+  if (state.phase !== "battle") return;
+  const card = state.playerHand.find((entry) => entry.id === skillId);
+  if (!card || card.used) return;
+  resolveTurn(skillId);
 }
 
 function resolveTurn(playerSkillId) {
@@ -149,18 +112,27 @@ function resolveTurn(playerSkillId) {
     finishBattle();
   } else {
     state.turn += 1;
+    state.logEntries.unshift({
+      title: `次は第${state.turn}ターン`,
+      body: `残り${remainingPlayerCards().length}枚から次の1枚を選んでください。`,
+    });
     render();
   }
 }
 
 function chooseCpuSkill() {
   const options = state.cpuHand.filter((card) => !card.used).map((card) => card.id);
-  const playerAttackBias = remainingPlayerCards().includes("charge")
-    ? ["guard", "counter"]
-    : ["attack", "heavy", "guard", "counter"];
+  const playerOptions = remainingPlayerCards();
+  const playerLikelyAttack = playerOptions.some((id) => ["attack", "heavy"].includes(id));
+  const playerLikelyCharge = playerOptions.includes("charge");
 
-  const preferred = options.find((id) => playerAttackBias.includes(id));
-  if (Math.random() < 0.58 && preferred) {
+  const priorities = [];
+  if (playerLikelyCharge) priorities.push("guard", "counter", "charge");
+  if (playerLikelyAttack) priorities.push("counter", "guard", "heavy", "attack");
+  priorities.push("attack", "guard", "heavy", "counter", "charge");
+
+  const preferred = priorities.find((id) => options.includes(id));
+  if (preferred && Math.random() < 0.62) {
     return preferred;
   }
 
@@ -180,13 +152,11 @@ function executeResolution(playerSkill, cpuSkill) {
   const details = [];
   const playerCtx = {
     skill: playerSkill,
-    target: cpuSkill,
     charge: state.playerCharge,
     chargeSpent: false,
   };
   const cpuCtx = {
     skill: cpuSkill,
-    target: playerSkill,
     charge: state.cpuCharge,
     chargeSpent: false,
   };
@@ -300,7 +270,7 @@ function finishBattle() {
 
   state.logEntries.unshift({
     title: `結果: ${resultText}`,
-    body: "「もう1回」で即再戦できます。短いからこそ、次は別の3枚で読み合えます。",
+    body: "「もう1回」で即再戦できます。毎ターン1枚ずつ選ぶので、短くても読み合いが残ります。",
   });
 
   render();
@@ -319,20 +289,13 @@ function renderHeader() {
   els.cpuHp.textContent = state.cpuHp;
   els.playerCharge.textContent = `溜め: ${state.playerCharge}`;
   els.cpuCharge.textContent = `溜め: ${state.cpuCharge}`;
-  els.selectionCounter.textContent = `${state.selectedSkills.length} / 3 選択`;
+  els.selectionCounter.textContent = `${remainingPlayerCards().length} / 5 使用可能`;
 
-  if (state.phase === "draft") {
-    els.phaseTitle.textContent = "スキルを3枚選ぶ";
-    els.turnLabel.textContent = "準備中";
-    els.statusText.textContent =
-      state.selectedSkills.length === 3
-        ? "デッキ完成。バトルを開始します。"
-        : "5枚の中から、3ターンで使いたい3枚を選んでください。";
-    setBadge("READY");
-  } else if (state.phase === "battle") {
+  if (state.phase === "battle") {
     els.phaseTitle.textContent = `第${state.turn}ターン`;
     els.turnLabel.textContent = `${state.turn} / 3`;
-    els.statusText.textContent = "残っている手札からこのターンに使う1枚を選択してください。";
+    els.statusText.textContent =
+      "残っている5枚からこのターンに使う1枚を選択してください。使ったスキルは次のターンでは使えません。";
     setBadge("BATTLE");
   } else {
     els.phaseTitle.textContent = "結果";
@@ -352,12 +315,12 @@ function setBadge(label, tone = "") {
 
 function resultMessage() {
   if (state.winner === "win") {
-    return "3ターンの読み合いを制しました。構成を変えて、もっと強い勝ち筋も試せます。";
+    return "3ターンの読み合いを制しました。選ぶ順番でも勝率が変わります。";
   }
   if (state.winner === "lose") {
-    return "CPUに読まれました。防御やカウンターの混ぜ方を変えると空気が変わります。";
+    return "CPUに読まれました。次は出す順番を変えて勝負できます。";
   }
-  return "お互いに一歩も引かない引き分け。次は強攻撃の通し方が勝負になりそうです。";
+  return "引き分けです。1枚ずつ選ぶぶん、次の一手の圧が強く残ります。";
 }
 
 function renderSkillPool() {
@@ -365,9 +328,10 @@ function renderSkillPool() {
 
   SKILLS.forEach((skill) => {
     const card = buildCard(skill);
-    const selected = state.selectedSkills.includes(skill.id);
-    card.classList.toggle("selected", selected);
-    card.disabled = state.phase !== "draft";
+    const playerCard = state.playerHand.find((entry) => entry.id === skill.id);
+    const available = Boolean(playerCard) && !playerCard.used && state.phase === "battle";
+    card.classList.toggle("selected", available);
+    card.disabled = !available;
     card.addEventListener("click", () => toggleSkill(skill.id));
     els.skillPool.appendChild(card);
   });
@@ -383,25 +347,21 @@ function renderHands() {
 
   state.playerHand.forEach((card) => {
     const skill = SKILLS.find((entry) => entry.id === card.id);
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "hand-card";
-    button.innerHTML = `<strong>${skill.name}</strong><small>${
-      card.used ? "使用済み" : "このターンに使う"
+    const item = document.createElement("div");
+    item.className = `hand-card ${card.used ? "revealed" : "hidden"}`;
+    item.innerHTML = `<strong>${skill.name}</strong><small>${
+      card.used ? "使用済み" : "未使用"
     }</small>`;
-    button.disabled = card.used || state.phase !== "battle";
-    button.classList.toggle("active", !card.used && state.phase === "battle");
-    button.addEventListener("click", () => resolveTurn(card.id));
-    els.playerHand.appendChild(button);
+    els.playerHand.appendChild(item);
   });
 
   state.cpuHand.forEach((card) => {
     const skill = SKILLS.find((entry) => entry.id === card.id);
-    const item = document.createElement("div");
     const revealed = state.phase === "result" || card.used;
+    const item = document.createElement("div");
     item.className = `hand-card ${revealed ? "revealed" : "hidden"}`;
     item.innerHTML = `<strong>${revealed ? skill.name : "???"}</strong><small>${
-      revealed ? (card.used ? "使用済み" : "未使用") : "CPUの伏せ札"
+      revealed ? (card.used ? "使用済み" : "未使用") : "CPUの未公開スキル"
     }</small>`;
     els.cpuHand.appendChild(item);
   });
@@ -409,7 +369,7 @@ function renderHands() {
 
 function renderReveal() {
   if (!state.lastReveal) {
-    els.revealText.textContent = "まだバトルは始まっていません";
+    els.revealText.textContent = "1ターン目のカードを選んでください";
     return;
   }
 

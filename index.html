@@ -15,10 +15,10 @@
   <body>
     <main class="app-shell">
       <section class="hero-panel">
-        <p class="eyebrow">3ターン / 3枚 / 同時選択</p>
+        <p class="eyebrow">3ターン / 毎ターン1枚選択 / 同時公開</p>
         <h1>10secondsデッキバトル</h1>
         <p class="hero-copy">
-          5枚から3枚だけ選ぶ。短いのに読み合いが残る、CPU対戦の超短期バトル。
+          5枚から毎ターン1枚ずつ選ぶ。短いのに読み合いが残る、CPU対戦の超短期バトル。
         </p>
 
         <div class="hero-stats">
@@ -32,7 +32,7 @@
           </div>
           <div class="stat-card accent">
             <span>ターン</span>
-            <strong id="turnLabel">準備中</strong>
+            <strong id="turnLabel">1 / 3</strong>
           </div>
         </div>
       </section>
@@ -41,19 +41,19 @@
         <div class="phase-banner">
           <div>
             <p class="phase-label">現在フェーズ</p>
-            <h2 id="phaseTitle">スキルを3枚選ぶ</h2>
+            <h2 id="phaseTitle">第1ターン</h2>
           </div>
           <button id="resetButton" class="secondary-button">もう1回</button>
         </div>
 
         <p id="statusText" class="status-text">
-          5枚の中から、3ターンで使いたい3枚を選んでください。
+          5枚の中からこのターンに使う1枚を選んでください。使ったスキルは次のターンでは使えません。
         </p>
 
         <section>
           <div class="section-heading">
-            <h3>スキル一覧</h3>
-            <span id="selectionCounter">0 / 3 選択</span>
+            <h3>残りスキル</h3>
+            <span id="selectionCounter">5 / 5 使用可能</span>
           </div>
           <div id="skillPool" class="skill-grid"></div>
         </section>
@@ -61,7 +61,7 @@
         <section class="battle-layout">
           <div class="battle-column">
             <div class="section-heading">
-              <h3>あなたの手札</h3>
+              <h3>あなたの使用状況</h3>
               <span id="playerCharge">溜め: 0</span>
             </div>
             <div id="playerHand" class="hand-grid"></div>
@@ -69,7 +69,7 @@
 
           <div class="battle-column">
             <div class="section-heading">
-              <h3>CPU</h3>
+              <h3>CPUの使用状況</h3>
               <span id="cpuCharge">溜め: 0</span>
             </div>
             <div id="cpuHand" class="hand-grid cpu-grid"></div>
@@ -79,9 +79,9 @@
         <section class="result-strip">
           <div>
             <p class="phase-label">直前の公開</p>
-            <h3 id="revealText">まだバトルは始まっていません</h3>
+            <h3 id="revealText">1ターン目のカードを選んでください</h3>
           </div>
-          <div class="result-badge" id="resultBadge">READY</div>
+          <div class="result-badge" id="resultBadge">BATTLE</div>
         </section>
 
         <section class="log-panel">
