@@ -14,93 +14,91 @@
   </head>
   <body>
     <main class="app-shell">
-      <section class="hero-panel">
-        <p class="eyebrow">3ターン / 毎ターン1枚選択 / 同時公開</p>
-        <h1>10secondsデッキバトル</h1>
-        <p class="hero-copy">
-          5枚から毎ターン1枚ずつ選ぶ。短いのに読み合いが残る、CPU対戦の超短期バトル。
-        </p>
-
-        <div class="hero-stats">
-          <div class="stat-card">
-            <span>プレイヤーHP</span>
-            <strong id="playerHp">10</strong>
+      <section class="top-banner">
+        <div class="title-phase-wrap">
+          <div class="title-block">
+            <p class="eyebrow">3ターン / 毎ターン1枚選択 / 同時公開</p>
+            <h1>10secondsデッキバトル</h1>
+            <p class="hero-copy">短いのに読み合いが残る、CPU対戦の超短期バトル。</p>
           </div>
-          <div class="stat-card">
-            <span>CPU HP</span>
-            <strong id="cpuHp">10</strong>
-          </div>
-          <div class="stat-card accent">
-            <span>ターン</span>
+          <div class="phase-block">
+            <p class="phase-label">現在フェーズ</p>
+            <h2 id="phaseTitle">第1ターン</h2>
             <strong id="turnLabel">1 / 3</strong>
+            <button id="resetButton" class="secondary-button">もう1回</button>
           </div>
+        </div>
+
+        <div class="status-row">
+          <article class="hp-card player">
+            <div class="hp-head">
+              <span>PLAYER</span>
+              <strong id="playerHp">100 / 100</strong>
+            </div>
+            <div class="hp-bar"><div id="playerHpFill" class="hp-fill"></div></div>
+            <small id="playerCharge">溜め +0</small>
+          </article>
+
+          <article class="hp-card cpu">
+            <div class="hp-head">
+              <span>CPU</span>
+              <strong id="cpuHp">100 / 100</strong>
+            </div>
+            <div class="hp-bar"><div id="cpuHpFill" class="hp-fill cpu-fill"></div></div>
+            <small id="cpuCharge">溜め +0</small>
+          </article>
         </div>
       </section>
 
-      <section class="game-panel">
-        <div class="phase-banner">
-          <div>
-            <p class="phase-label">現在フェーズ</p>
-            <h2 id="phaseTitle">第1ターン</h2>
-          </div>
-          <button id="resetButton" class="secondary-button">もう1回</button>
-        </div>
-
-        <p id="statusText" class="status-text">
-          5枚の中からこのターンに使う1枚を選んでください。使ったスキルは次のターンでは使えません。
-        </p>
-
-        <section>
-          <div class="section-heading">
-            <h3>残りスキル</h3>
+      <section class="content-grid">
+        <section class="panel compact-panel">
+          <div class="section-heading compact-heading">
+            <h3>スキル状況</h3>
             <span id="selectionCounter">5 / 5 使用可能</span>
           </div>
-          <div id="skillPool" class="skill-grid"></div>
+          <p id="statusText" class="status-text">このターンに使う1枚を選んでください。</p>
+          <div id="skillPool" class="skill-grid compact-skill-grid"></div>
         </section>
 
-        <section class="battle-layout">
-          <div class="battle-column">
-            <div class="section-heading">
-              <h3>あなたの使用状況</h3>
-              <span id="playerCharge">溜め: 0</span>
+        <section class="side-stack">
+          <section class="panel mini-panel">
+            <div class="section-heading compact-heading">
+              <h3>公開</h3>
+              <div class="result-badge" id="resultBadge">BATTLE</div>
             </div>
-            <div id="playerHand" class="hand-grid"></div>
-          </div>
+            <p id="revealText" class="reveal-line">1ターン目のカードを選んでください</p>
+          </section>
 
-          <div class="battle-column">
-            <div class="section-heading">
-              <h3>CPUの使用状況</h3>
-              <span id="cpuCharge">溜め: 0</span>
+          <section class="panel mini-panel">
+            <div class="section-heading compact-heading">
+              <h3>CPUスキル</h3>
+              <span>使用状況</span>
             </div>
-            <div id="cpuHand" class="hand-grid cpu-grid"></div>
-          </div>
-        </section>
+            <div id="cpuHand" class="hand-grid cpu-grid compact-hand-grid"></div>
+          </section>
 
-        <section class="result-strip">
-          <div>
-            <p class="phase-label">直前の公開</p>
-            <h3 id="revealText">1ターン目のカードを選んでください</h3>
-          </div>
-          <div class="result-badge" id="resultBadge">BATTLE</div>
-        </section>
-
-        <section class="log-panel">
-          <div class="section-heading">
-            <h3>バトルログ</h3>
-            <span>3ターンで決着</span>
-          </div>
-          <div id="battleLog" class="log-list"></div>
+          <section class="panel mini-panel">
+            <div class="section-heading compact-heading">
+              <h3>バトルログ</h3>
+              <span>要約</span>
+            </div>
+            <div id="battleLog" class="log-list compact-log"></div>
+          </section>
         </section>
       </section>
     </main>
 
     <template id="skillCardTemplate">
-      <button class="skill-card" type="button">
+      <button class="skill-card compact-card" type="button">
         <div class="skill-header">
           <strong class="skill-name"></strong>
           <span class="skill-tag"></span>
         </div>
         <p class="skill-description"></p>
+        <div class="skill-footer">
+          <span class="skill-power"></span>
+          <span class="skill-state"></span>
+        </div>
       </button>
     </template>
 
