@@ -1,6 +1,59 @@
 const MAX_HP = 100;
 const CHARGE_BONUS = 20;
 
+const CHARACTERS = [
+  {
+    id: "cat",
+    name: "ネコ",
+    emoji: "猫",
+    attack: 80,
+    defense: 70,
+    hp: 100,
+    style: "手数型",
+    avatar: "./assets/illustrations/cat.png",
+  },
+  {
+    id: "dog",
+    name: "犬",
+    emoji: "犬",
+    attack: 60,
+    defense: 70,
+    hp: 100,
+    style: "安定型",
+    avatar: "./assets/illustrations/dog.png",
+  },
+  {
+    id: "parakeet",
+    name: "インコ",
+    emoji: "鳥",
+    attack: 80,
+    defense: 80,
+    hp: 90,
+    style: "速攻型",
+    avatar: "./assets/illustrations/parakeet.png",
+  },
+  {
+    id: "goldfish",
+    name: "金魚",
+    emoji: "魚",
+    attack: 80,
+    defense: 90,
+    hp: 80,
+    style: "耐久型",
+    avatar: "./assets/illustrations/goldfish.png",
+  },
+  {
+    id: "lizard",
+    name: "トカゲ",
+    emoji: "蜥",
+    attack: 100,
+    defense: 50,
+    hp: 100,
+    style: "強襲型",
+    avatar: "./assets/illustrations/lizard.png",
+  },
+];
+
 const SKILLS = [
   {
     id: "attack",
@@ -40,9 +93,11 @@ const SKILLS = [
 ];
 
 const state = {
-  phase: "battle",
-  playerHp: MAX_HP,
-  cpuHp: MAX_HP,
+  phase: "character",
+  playerCharacter: null,
+  cpuCharacter: null,
+  playerHp: 0,
+  cpuHp: 0,
   playerCharge: 0,
   cpuCharge: 0,
   turn: 1,
@@ -51,47 +106,95 @@ const state = {
   lastReveal: null,
   logEntries: [],
   winner: null,
+  soundEnabled: true,
+  resultReason: "勝負の決め手がここに出ます。",
 };
 
 const els = {
+  playerName: document.querySelector("#playerName"),
+  cpuName: document.querySelector("#cpuName"),
   playerHp: document.querySelector("#playerHp"),
   cpuHp: document.querySelector("#cpuHp"),
   playerHpFill: document.querySelector("#playerHpFill"),
   cpuHpFill: document.querySelector("#cpuHpFill"),
   playerCharge: document.querySelector("#playerCharge"),
   cpuCharge: document.querySelector("#cpuCharge"),
+  playerAvatar: document.querySelector("#playerAvatar"),
+  cpuAvatar: document.querySelector("#cpuAvatar"),
+  playerAvatarImg: document.querySelector("#playerAvatarImg"),
+  cpuAvatarImg: document.querySelector("#cpuAvatarImg"),
   turnLabel: document.querySelector("#turnLabel"),
   phaseTitle: document.querySelector("#phaseTitle"),
+  leftTitle: document.querySelector("#leftTitle"),
   selectionCounter: document.querySelector("#selectionCounter"),
   statusText: document.querySelector("#statusText"),
+  characterPool: document.querySelector("#characterPool"),
   skillPool: document.querySelector("#skillPool"),
+  cpuStyle: document.querySelector("#cpuStyle"),
   cpuHand: document.querySelector("#cpuHand"),
   revealText: document.querySelector("#revealText"),
+  resultReason: document.querySelector("#resultReason"),
   battleLog: document.querySelector("#battleLog"),
   resultBadge: document.querySelector("#resultBadge"),
+  revealPanel: document.querySelector("#revealPanel"),
+  soundButton: document.querySelector("#soundButton"),
   resetButton: document.querySelector("#resetButton"),
+  characterTemplate: document.querySelector("#characterCardTemplate"),
   template: document.querySelector("#skillCardTemplate"),
 };
 
+const audio = {
+  ctx: null,
+};
+
 function resetGame() {
-  state.phase = "battle";
-  state.playerHp = MAX_HP;
-  state.cpuHp = MAX_HP;
+  state.soundEnabled = loadSoundPreference();
+  state.phase = "character";
+  state.playerCharacter = null;
+  state.cpuCharacter = null;
+  state.playerHp = 0;
+  state.cpuHp = 0;
+  state.playerCharge = 0;
+  state.cpuCharge = 0;
+  state.turn = 1;
+  state.playerHand = [];
+  state.cpuHand = [];
+  state.lastReveal = null;
+  state.logEntries = [{ label: "開始", text: "まずはキャラクターを選択" }];
+  state.winner = null;
+  state.resultReason = "勝負の決め手がここに出ます。";
+  render();
+}
+
+function chooseCharacter(characterId) {
+  if (state.phase !== "character") return;
+  state.playerCharacter = getCharacter(characterId);
+  state.cpuCharacter = chooseCpuCharacter(characterId);
+  state.playerHp = state.playerCharacter.hp;
+  state.cpuHp = state.cpuCharacter.hp;
   state.playerCharge = 0;
   state.cpuCharge = 0;
   state.turn = 1;
   state.playerHand = SKILLS.map((skill) => ({ id: skill.id, used: false }));
   state.cpuHand = SKILLS.map((skill) => ({ id: skill.id, used: false }));
   state.lastReveal = null;
-  state.logEntries = [{ label: "開始", text: "5枚から1枚選んで即バトル" }];
-  state.winner = null;
+  state.phase = "battle";
+  state.logEntries = [{ label: "開始", text: `${state.playerCharacter.name} vs ${state.cpuCharacter.name}` }];
+  state.resultReason = `${state.cpuCharacter.name}は${state.cpuCharacter.style}で応戦。`;
+  playSound("select");
   render();
+}
+
+function chooseCpuCharacter(playerCharacterId) {
+  const pool = CHARACTERS.filter((character) => character.id !== playerCharacterId);
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 function toggleSkill(skillId) {
   if (state.phase !== "battle") return;
   const card = state.playerHand.find((entry) => entry.id === skillId);
   if (!card || card.used) return;
+  playSound("select");
   resolveTurn(skillId);
 }
 
@@ -112,8 +215,11 @@ function resolveTurn(playerSkillId) {
     text: `${playerSkill.name} / ${cpuSkill.name} | ${summary.short}`,
   });
 
+  triggerRevealPulse();
+  playTurnSounds(summary.notes, playerSkill, cpuSkill);
+
   if (state.playerHp <= 0 || state.cpuHp <= 0 || state.turn >= 3) {
-    finishBattle();
+    finishBattle(summary.reason);
   } else {
     state.turn += 1;
     render();
@@ -125,6 +231,8 @@ function chooseCpuSkill() {
   const playerOptions = remainingPlayerCards();
   const priorities = [];
 
+  if (state.cpuCharacter && state.cpuCharacter.attack >= 80) priorities.push("heavy", "attack");
+  if (state.cpuCharacter && state.cpuCharacter.defense >= 80) priorities.push("guard", "counter");
   if (playerOptions.includes("charge")) priorities.push("guard", "counter");
   if (playerOptions.some((id) => ["attack", "heavy"].includes(id))) {
     priorities.push("counter", "guard", "heavy", "attack");
@@ -134,6 +242,10 @@ function chooseCpuSkill() {
   const preferred = priorities.find((id) => options.includes(id));
   if (preferred && Math.random() < 0.65) return preferred;
   return options[Math.floor(Math.random() * options.length)];
+}
+
+function getCharacter(id) {
+  return CHARACTERS.find((character) => character.id === id);
 }
 
 function getSkill(id) {
@@ -155,33 +267,38 @@ function executeResolution(playerSkill, cpuSkill) {
   const cpuCtx = { skill: cpuSkill, charge: state.cpuCharge, chargeSpent: false };
 
   if (playerSkill.id === "charge") {
-    state.playerCharge += CHARGE_BONUS;
-    notes.push("自+20");
+    state.playerCharge += chargeBonus(state.playerCharacter);
+    notes.push("自+溜め");
   }
   if (cpuSkill.id === "charge") {
-    state.cpuCharge += CHARGE_BONUS;
-    notes.push("敵+20");
+    state.cpuCharge += chargeBonus(state.cpuCharacter);
+    notes.push("敵+溜め");
   }
 
   const playerGuard = playerSkill.id === "guard";
   const cpuGuard = cpuSkill.id === "guard";
   const playerCounter = canCounter(playerSkill, cpuSkill);
   const cpuCounter = canCounter(cpuSkill, playerSkill);
+  const playerAttackSealed = cpuCounter && isAttackSkill(playerSkill);
+  const cpuAttackSealed = playerCounter && isAttackSkill(cpuSkill);
 
   if (playerCounter) {
-    state.cpuHp -= 30;
-    notes.push("敵-30");
+    const damage = adjustedDamage(30, state.playerCharacter, state.cpuCharacter, false);
+    state.cpuHp -= damage;
+    notes.push(`敵-${damage}`);
   }
   if (cpuCounter) {
-    state.playerHp -= 30;
-    notes.push("自-30");
+    const damage = adjustedDamage(30, state.cpuCharacter, state.playerCharacter, false);
+    state.playerHp -= damage;
+    notes.push(`自-${damage}`);
   }
 
   if (playerSkill.id === "heavy" && cpuCounter) {
-    state.playerHp -= 50;
-    notes.push("自反動-50");
-  } else {
-    const damage = outgoingDamage(playerCtx);
+    const recoil = adjustedDamage(50, state.playerCharacter, state.playerCharacter, true);
+    state.playerHp -= recoil;
+    notes.push(`自反動-${recoil}`);
+  } else if (!playerAttackSealed) {
+    const damage = outgoingDamage(playerCtx, state.playerCharacter, state.cpuCharacter);
     if (damage > 0) {
       if (cpuGuard) {
         notes.push("敵防御");
@@ -193,10 +310,11 @@ function executeResolution(playerSkill, cpuSkill) {
   }
 
   if (cpuSkill.id === "heavy" && playerCounter) {
-    state.cpuHp -= 50;
-    notes.push("敵反動-50");
-  } else {
-    const damage = outgoingDamage(cpuCtx);
+    const recoil = adjustedDamage(50, state.cpuCharacter, state.cpuCharacter, true);
+    state.cpuHp -= recoil;
+    notes.push(`敵反動-${recoil}`);
+  } else if (!cpuAttackSealed) {
+    const damage = outgoingDamage(cpuCtx, state.cpuCharacter, state.playerCharacter);
     if (damage > 0) {
       if (playerGuard) {
         notes.push("自防御");
@@ -212,21 +330,35 @@ function executeResolution(playerSkill, cpuSkill) {
   state.playerHp = Math.max(0, state.playerHp);
   state.cpuHp = Math.max(0, state.cpuHp);
 
-  return { short: notes.join(" / ") || "変化なし" };
+  return { short: notes.join(" / ") || "変化なし", notes, reason: summarizeReason(notes, playerSkill, cpuSkill) };
 }
 
 function canCounter(counterSkill, targetSkill) {
   return counterSkill.id === "counter" && ["attack", "heavy"].includes(targetSkill.id);
 }
 
-function outgoingDamage(ctx) {
+function isAttackSkill(skill) {
+  return ["attack", "heavy"].includes(skill.id);
+}
+
+function chargeBonus(character) {
+  return Math.round(CHARGE_BONUS * (0.7 + character.attack / 100));
+}
+
+function adjustedDamage(base, attacker, defender, recoil) {
+  const attackScale = recoil ? 1 : 0.6 + attacker.attack / 100;
+  const defenseScale = recoil ? 1 : 1 - defender.defense / 400;
+  return Math.max(8, Math.round(base * attackScale * defenseScale));
+}
+
+function outgoingDamage(ctx, attacker, defender) {
   if (ctx.skill.id === "attack") {
     ctx.chargeSpent = true;
-    return 30 + ctx.charge;
+    return adjustedDamage(30 + ctx.charge, attacker, defender, false);
   }
   if (ctx.skill.id === "heavy") {
     ctx.chargeSpent = true;
-    return 50 + ctx.charge;
+    return adjustedDamage(50 + ctx.charge, attacker, defender, false);
   }
   return 0;
 }
@@ -237,7 +369,7 @@ function spendCharge(ctx, owner) {
   else state.cpuCharge = 0;
 }
 
-function finishBattle() {
+function finishBattle(reason) {
   state.phase = "result";
 
   if (state.playerHp > state.cpuHp) state.winner = "win";
@@ -246,11 +378,174 @@ function finishBattle() {
 
   const labelMap = { win: "勝利", lose: "敗北", draw: "引分" };
   state.logEntries.unshift({ label: "結果", text: labelMap[state.winner] });
+  state.resultReason =
+    state.winner === "win" ? `勝因: ${reason}` : state.winner === "lose" ? `敗因: ${reason}` : `決め手: ${reason}`;
+  playSound(state.winner === "win" ? "win" : state.winner === "lose" ? "lose" : "draw");
   render();
+}
+
+function summarizeReason(notes, playerSkill, cpuSkill) {
+  if (notes.some((note) => note.includes("反動"))) return "強攻撃を読んで反動を取った。";
+  if (notes.some((note) => note.includes("防御"))) return "防御で流れを止めた。";
+  if (notes.some((note) => note.includes("溜め"))) return "溜めが次の圧を作った。";
+  if (playerSkill.id === "counter" || cpuSkill.id === "counter") return "カウンターの読み合いが刺さった。";
+  const enemyHits = notes.filter((note) => note.startsWith("敵-")).length;
+  const selfHits = notes.filter((note) => note.startsWith("自-")).length;
+  if (enemyHits > selfHits) return "先に大きいダメージを通した。";
+  if (selfHits > enemyHits) return "受けの択で差がついた。";
+  return "お互いの択がかみ合った。";
+}
+
+function ensureAudioContext() {
+  if (!state.soundEnabled) return null;
+  if (!audio.ctx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    audio.ctx = new AudioContextClass();
+  }
+  if (audio.ctx.state === "suspended") {
+    audio.ctx.resume();
+  }
+  return audio.ctx;
+}
+
+function loadSoundPreference() {
+  try {
+    const saved = window.localStorage.getItem("deckBattleSoundEnabled");
+    return saved === null ? true : saved === "true";
+  } catch {
+    return true;
+  }
+}
+
+function saveSoundPreference() {
+  try {
+    window.localStorage.setItem("deckBattleSoundEnabled", String(state.soundEnabled));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function triggerRevealPulse() {
+  if (!els.revealPanel) return;
+  els.revealPanel.classList.remove("is-revealed");
+  window.requestAnimationFrame(() => {
+    els.revealPanel.classList.add("is-revealed");
+  });
+}
+
+function scheduleTone(ctx, frequency, start, duration, gainValue, type = "triangle") {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(frequency, start);
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(start);
+  osc.stop(start + duration + 0.02);
+}
+
+function playSound(kind) {
+  const ctx = ensureAudioContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+
+  if (kind === "select") {
+    scheduleTone(ctx, 520, now, 0.08, 0.03, "square");
+    scheduleTone(ctx, 660, now + 0.05, 0.1, 0.02, "triangle");
+    return;
+  }
+
+  if (kind === "charge") {
+    scheduleTone(ctx, 320, now, 0.12, 0.025, "sine");
+    scheduleTone(ctx, 480, now + 0.08, 0.16, 0.03, "sine");
+    return;
+  }
+
+  if (kind === "hit") {
+    scheduleTone(ctx, 180, now, 0.08, 0.04, "sawtooth");
+    scheduleTone(ctx, 120, now + 0.03, 0.12, 0.03, "square");
+    return;
+  }
+
+  if (kind === "impact") {
+    scheduleTone(ctx, 210, now, 0.04, 0.05, "square");
+    scheduleTone(ctx, 132, now + 0.015, 0.08, 0.045, "sawtooth");
+    scheduleTone(ctx, 86, now + 0.03, 0.12, 0.035, "triangle");
+    return;
+  }
+
+  if (kind === "heavy") {
+    scheduleTone(ctx, 120, now, 0.1, 0.04, "sawtooth");
+    scheduleTone(ctx, 90, now + 0.04, 0.16, 0.035, "square");
+    return;
+  }
+
+  if (kind === "counter") {
+    scheduleTone(ctx, 740, now, 0.05, 0.03, "square");
+    scheduleTone(ctx, 440, now + 0.05, 0.08, 0.03, "square");
+    return;
+  }
+
+  if (kind === "block") {
+    scheduleTone(ctx, 240, now, 0.07, 0.025, "triangle");
+    scheduleTone(ctx, 190, now + 0.04, 0.09, 0.02, "triangle");
+    return;
+  }
+
+  if (kind === "win") {
+    scheduleTone(ctx, 523, now, 0.12, 0.03, "triangle");
+    scheduleTone(ctx, 659, now + 0.11, 0.12, 0.03, "triangle");
+    scheduleTone(ctx, 784, now + 0.22, 0.2, 0.04, "triangle");
+    return;
+  }
+
+  if (kind === "lose") {
+    scheduleTone(ctx, 392, now, 0.14, 0.03, "sawtooth");
+    scheduleTone(ctx, 294, now + 0.12, 0.14, 0.03, "sawtooth");
+    scheduleTone(ctx, 196, now + 0.24, 0.22, 0.035, "sawtooth");
+    return;
+  }
+
+  if (kind === "draw") {
+    scheduleTone(ctx, 330, now, 0.12, 0.025, "triangle");
+    scheduleTone(ctx, 330, now + 0.14, 0.12, 0.02, "triangle");
+  }
+}
+
+function playTurnSounds(notes, playerSkill, cpuSkill) {
+  const attackCommitted = isAttackSkill(playerSkill) || isAttackSkill(cpuSkill);
+
+  if (notes.some((note) => note.includes("防御"))) {
+    playSound("block");
+  }
+  if (notes.some((note) => note.includes("溜め"))) {
+    playSound("charge");
+  }
+  if (notes.some((note) => note.includes("反動"))) {
+    playSound("counter");
+    playSound("heavy");
+    return;
+  }
+  if (attackCommitted) {
+    playSound("impact");
+  }
+  if (notes.some((note) => note.includes("-30"))) {
+    playSound("counter");
+  }
+  if (notes.some((note) => note.includes("-5") || note.includes("-6") || note.includes("-7"))) {
+    playSound("heavy");
+  } else if (notes.some((note) => note.includes("-"))) {
+    playSound("hit");
+  }
 }
 
 function render() {
   renderHeader();
+  renderCharacterPool();
   renderSkillPool();
   renderCpuHand();
   renderReveal();
@@ -258,25 +553,77 @@ function render() {
 }
 
 function renderHeader() {
-  els.playerHp.textContent = `${state.playerHp} / ${MAX_HP}`;
-  els.cpuHp.textContent = `${state.cpuHp} / ${MAX_HP}`;
-  els.playerHpFill.style.width = `${(state.playerHp / MAX_HP) * 100}%`;
-  els.cpuHpFill.style.width = `${(state.cpuHp / MAX_HP) * 100}%`;
+  const playerMax = state.playerCharacter ? state.playerCharacter.hp : MAX_HP;
+  const cpuMax = state.cpuCharacter ? state.cpuCharacter.hp : MAX_HP;
+  els.playerName.textContent = state.playerCharacter ? state.playerCharacter.name : "PLAYER";
+  els.cpuName.textContent = state.cpuCharacter ? state.cpuCharacter.name : "CPU";
+  els.playerHp.textContent = `${state.playerHp} / ${playerMax}`;
+  els.cpuHp.textContent = `${state.cpuHp} / ${cpuMax}`;
+  els.playerHpFill.style.width = `${playerMax ? (state.playerHp / playerMax) * 100 : 0}%`;
+  els.cpuHpFill.style.width = `${cpuMax ? (state.cpuHp / cpuMax) * 100 : 0}%`;
   els.playerCharge.textContent = `溜め +${state.playerCharge}`;
   els.cpuCharge.textContent = `溜め +${state.cpuCharge}`;
-  els.selectionCounter.textContent = `${remainingPlayerCards().length} / 5 使用可能`;
+  els.cpuStyle.textContent = state.cpuCharacter ? `${state.cpuCharacter.style}AI` : "標準AI";
+  els.playerAvatar.dataset.character = state.playerCharacter?.id ?? "neutral";
+  els.cpuAvatar.dataset.character = state.cpuCharacter?.id ?? "neutral";
+  setAvatarImage(els.playerAvatarImg, state.playerCharacter);
+  setAvatarImage(els.cpuAvatarImg, state.cpuCharacter);
 
-  if (state.phase === "battle") {
+  if (state.phase === "character") {
+    els.phaseTitle.textContent = "キャラ選択";
+    els.turnLabel.textContent = "準備中";
+    els.leftTitle.textContent = "キャラクター選択";
+    els.selectionCounter.textContent = `${CHARACTERS.length}体から選択`;
+    els.statusText.textContent = "キャラクターを選ぶと、攻撃力・防御力・HPが対戦に反映されます。";
+    els.resultReason.textContent = state.resultReason;
+    setBadge("READY");
+  } else if (state.phase === "battle") {
     els.phaseTitle.textContent = `第${state.turn}ターン`;
     els.turnLabel.textContent = `${state.turn} / 3`;
-    els.statusText.textContent = "このターンに使う1枚を選んでください。";
+    els.leftTitle.textContent = "スキル状況";
+    els.selectionCounter.textContent = `${remainingPlayerCards().length} / 5 使用可能`;
+    els.statusText.textContent = `残り${remainingPlayerCards().length}枚。 このターンに使う1枚を選んでください。`;
+    els.resultReason.textContent = state.resultReason;
     setBadge("BATTLE");
   } else {
     els.phaseTitle.textContent = "結果";
     els.turnLabel.textContent = "END";
+    els.leftTitle.textContent = "スキル状況";
+    els.selectionCounter.textContent = `${remainingPlayerCards().length} / 5 使用可能`;
     els.statusText.textContent = resultMessage();
+    els.resultReason.textContent = state.resultReason;
     setBadge(state.winner === "win" ? "WIN" : state.winner === "lose" ? "LOSE" : "DRAW", state.winner);
   }
+
+  els.soundButton.textContent = state.soundEnabled ? "音 ON" : "音 OFF";
+  els.soundButton.setAttribute("aria-pressed", String(state.soundEnabled));
+}
+
+function renderCharacterPool() {
+  els.characterPool.innerHTML = "";
+  els.characterPool.hidden = state.phase !== "character";
+  els.skillPool.hidden = state.phase === "character";
+  if (state.phase !== "character") return;
+
+  CHARACTERS.forEach((character) => {
+    const card = els.characterTemplate.content.firstElementChild.cloneNode(true);
+    card.querySelector(".character-avatar").dataset.character = character.id;
+    const photo = card.querySelector(".character-photo");
+    photo.src = character.avatar;
+    photo.alt = `${character.name}のイラスト`;
+    card.querySelector(".character-name").textContent = character.name;
+    card.querySelector(".character-emoji").textContent = character.emoji;
+    card.querySelector(".character-style").textContent = character.style;
+    card.querySelector(".character-stats").innerHTML = [
+      `攻 ${character.attack}`,
+      `防 ${character.defense}`,
+      `HP ${character.hp}`,
+    ]
+      .map((text) => `<span>${text}</span>`)
+      .join("");
+    card.addEventListener("click", () => chooseCharacter(character.id));
+    els.characterPool.appendChild(card);
+  });
 }
 
 function setBadge(label, tone = "") {
@@ -292,16 +639,19 @@ function resultMessage() {
 
 function renderSkillPool() {
   els.skillPool.innerHTML = "";
+  if (state.phase === "character") return;
 
   SKILLS.forEach((skill) => {
     const card = buildCard(skill);
     const playerCard = state.playerHand.find((entry) => entry.id === skill.id);
     const available = Boolean(playerCard) && !playerCard.used && state.phase === "battle";
+    const boosted = available && state.playerCharge > 0 && ["attack", "heavy"].includes(skill.id);
 
     card.classList.toggle("selected", available);
     card.classList.toggle("used", playerCard?.used);
+    card.classList.toggle("boosted", boosted);
     card.disabled = !available;
-    card.querySelector(".skill-state").textContent = playerCard?.used ? "使用済み" : "選択可";
+    card.querySelector(".skill-state").textContent = playerCard?.used ? "使用済み" : boosted ? "強化中" : "選択可";
     card.addEventListener("click", () => toggleSkill(skill.id));
     els.skillPool.appendChild(card);
   });
@@ -309,6 +659,7 @@ function renderSkillPool() {
 
 function renderCpuHand() {
   els.cpuHand.innerHTML = "";
+  if (state.phase === "character") return;
 
   state.cpuHand.forEach((card) => {
     const skill = getSkill(card.id);
@@ -321,11 +672,18 @@ function renderCpuHand() {
 }
 
 function renderReveal() {
+  if (state.phase === "character") {
+    els.revealText.textContent = "キャラクターを選んでください";
+    return;
+  }
   if (!state.lastReveal) {
     els.revealText.textContent = "1ターン目のカードを選んでください";
     return;
   }
   els.revealText.textContent = `あなた ${state.lastReveal.playerSkill.name} / CPU ${state.lastReveal.cpuSkill.name}`;
+  els.revealPanel.classList.remove("is-revealed");
+  void els.revealPanel.offsetWidth;
+  els.revealPanel.classList.add("is-revealed");
 }
 
 function renderLog() {
@@ -347,6 +705,25 @@ function buildCard(skill) {
   return fragment;
 }
 
+function setAvatarImage(img, character) {
+  if (!img) return;
+  if (!character) {
+    img.removeAttribute("src");
+    img.alt = "";
+    return;
+  }
+  img.src = character.avatar;
+  img.alt = `${character.name}のイラスト`;
+}
+
 els.resetButton.addEventListener("click", resetGame);
+els.soundButton.addEventListener("click", () => {
+  state.soundEnabled = !state.soundEnabled;
+  saveSoundPreference();
+  if (state.soundEnabled) {
+    playSound("select");
+  }
+  renderHeader();
+});
 
 resetGame();

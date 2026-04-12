@@ -23,26 +23,43 @@
           </div>
           <div class="phase-block">
             <p class="phase-label">現在フェーズ</p>
-            <h2 id="phaseTitle">第1ターン</h2>
-            <strong id="turnLabel">1 / 3</strong>
-            <button id="resetButton" class="secondary-button">もう1回</button>
+            <h2 id="phaseTitle">キャラ選択</h2>
+            <strong id="turnLabel">準備中</strong>
+            <div class="phase-actions">
+              <button id="soundButton" class="sound-button" type="button" aria-pressed="true">音 ON</button>
+              <button id="resetButton" class="secondary-button">もう1回</button>
+            </div>
           </div>
         </div>
 
         <div class="status-row">
           <article class="hp-card player">
-            <div class="hp-head">
-              <span>PLAYER</span>
-              <strong id="playerHp">100 / 100</strong>
+            <div class="hp-card-top">
+              <div id="playerAvatar" class="status-avatar" data-character="neutral" aria-hidden="true">
+                <img id="playerAvatarImg" class="status-photo" src="" alt="" />
+              </div>
+              <div class="hp-info">
+                <div class="hp-head">
+                  <span id="playerName">PLAYER</span>
+                  <strong id="playerHp">0 / 100</strong>
+                </div>
+              </div>
             </div>
             <div class="hp-bar"><div id="playerHpFill" class="hp-fill"></div></div>
             <small id="playerCharge">溜め +0</small>
           </article>
 
           <article class="hp-card cpu">
-            <div class="hp-head">
-              <span>CPU</span>
-              <strong id="cpuHp">100 / 100</strong>
+            <div class="hp-card-top">
+              <div id="cpuAvatar" class="status-avatar cpu-avatar" data-character="neutral" aria-hidden="true">
+                <img id="cpuAvatarImg" class="status-photo" src="" alt="" />
+              </div>
+              <div class="hp-info">
+                <div class="hp-head">
+                  <span id="cpuName">CPU</span>
+                  <strong id="cpuHp">0 / 100</strong>
+                </div>
+              </div>
             </div>
             <div class="hp-bar"><div id="cpuHpFill" class="hp-fill cpu-fill"></div></div>
             <small id="cpuCharge">溜め +0</small>
@@ -53,26 +70,28 @@
       <section class="content-grid">
         <section class="panel compact-panel">
           <div class="section-heading compact-heading">
-            <h3>スキル状況</h3>
-            <span id="selectionCounter">5 / 5 使用可能</span>
+            <h3 id="leftTitle">キャラクター選択</h3>
+            <span id="selectionCounter">5体から選択</span>
           </div>
-          <p id="statusText" class="status-text">このターンに使う1枚を選んでください。</p>
-          <div id="skillPool" class="skill-grid compact-skill-grid"></div>
+          <p id="statusText" class="status-text">まずはキャラクターを1体選んでください。</p>
+          <div id="characterPool" class="character-grid"></div>
+          <div id="skillPool" class="skill-grid compact-skill-grid" hidden></div>
         </section>
 
         <section class="side-stack">
-          <section class="panel mini-panel">
+          <section class="panel mini-panel reveal-panel" id="revealPanel">
             <div class="section-heading compact-heading">
               <h3>公開</h3>
               <div class="result-badge" id="resultBadge">BATTLE</div>
             </div>
             <p id="revealText" class="reveal-line">1ターン目のカードを選んでください</p>
+            <p id="resultReason" class="result-reason">勝負の決め手がここに出ます。</p>
           </section>
 
           <section class="panel mini-panel">
             <div class="section-heading compact-heading">
               <h3>CPUスキル</h3>
-              <span>使用状況</span>
+              <span id="cpuStyle">標準AI</span>
             </div>
             <div id="cpuHand" class="hand-grid cpu-grid compact-hand-grid"></div>
           </section>
@@ -87,6 +106,20 @@
         </section>
       </section>
     </main>
+
+    <template id="characterCardTemplate">
+      <button class="character-card" type="button">
+        <div class="character-avatar" data-character="neutral" aria-hidden="true">
+          <img class="character-photo" src="" alt="" />
+        </div>
+        <div class="character-header">
+          <strong class="character-name"></strong>
+          <span class="character-emoji"></span>
+        </div>
+        <p class="character-style"></p>
+        <div class="character-stats"></div>
+      </button>
+    </template>
 
     <template id="skillCardTemplate">
       <button class="skill-card compact-card" type="button">
