@@ -4,95 +4,103 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>10secondsデッキバトル</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <main class="app">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">3ターン / 毎ターン1枚選択 / 同時公開</p>
-          <h1>10secondsデッキバトル</h1>
+    <main class="app-shell">
+      <section class="top-banner">
+        <div class="title-phase-wrap">
+          <div class="title-block">
+            <p class="eyebrow">3ターン / 毎ターン1枚選択 / 同時公開</p>
+            <h1>10secondsデッキバトル</h1>
+            <p class="hero-copy">短いのに読み合いが残る、CPU対戦の超短期バトル。</p>
+          </div>
+          <div class="phase-block">
+            <p class="phase-label">現在フェーズ</p>
+            <h2 id="phaseTitle">第1ターン</h2>
+            <strong id="turnLabel">1 / 3</strong>
+            <button id="resetButton" class="secondary-button">もう1回</button>
+          </div>
         </div>
-        <button id="resetButton" class="reset-button" type="button">もう1回</button>
-      </header>
 
-      <section class="hero">
-        <div class="hero-main">
-          <p id="phaseTitle" class="phase-title">第1ターン</p>
-          <p id="statusText" class="status-text">残っているスキルから1枚選ぶと、すぐにCPUと同時発動します。</p>
-          <div class="hero-result">
-            <strong id="revealText">1ターン目のカードを選んでください</strong>
-            <span id="resultBadge" class="badge">BATTLE</span>
-          </div>
-        </div>
-        <div class="hero-side">
-          <div class="result-box">
-            <span class="result-label">結果</span>
-            <strong id="resultHeadline">進行中</strong>
-          </div>
-          <div class="stats">
-            <div class="stat">
-              <span>あなた</span>
-              <strong id="playerHp">10</strong>
+        <div class="status-row">
+          <article class="hp-card player">
+            <div class="hp-head">
+              <span>PLAYER</span>
+              <strong id="playerHp">100 / 100</strong>
             </div>
-            <div class="stat">
+            <div class="hp-bar"><div id="playerHpFill" class="hp-fill"></div></div>
+            <small id="playerCharge">溜め +0</small>
+          </article>
+
+          <article class="hp-card cpu">
+            <div class="hp-head">
               <span>CPU</span>
-              <strong id="cpuHp">10</strong>
+              <strong id="cpuHp">100 / 100</strong>
             </div>
-            <div class="stat">
-              <span>ターン</span>
-              <strong id="turnLabel">1 / 3</strong>
-            </div>
-          </div>
-          <div class="meta">
-            <span id="selectionCounter">5 / 5 使用可能</span>
-            <span id="playerCharge">あなた 溜め: 0</span>
-            <span id="cpuCharge">CPU 溜め: 0</span>
-          </div>
+            <div class="hp-bar"><div id="cpuHpFill" class="hp-fill cpu-fill"></div></div>
+            <small id="cpuCharge">溜め +0</small>
+          </article>
         </div>
       </section>
 
-      <section class="board">
-        <section class="panel">
-          <div class="panel-head">
-            <h2>スキル</h2>
-            <span class="tiny-note">選べるのは残りだけ</span>
+      <section class="content-grid">
+        <section class="panel compact-panel">
+          <div class="section-heading compact-heading">
+            <h3>スキル状況</h3>
+            <span id="selectionCounter">5 / 5 使用可能</span>
           </div>
-          <div id="skillPool" class="skill-list"></div>
+          <p id="statusText" class="status-text">このターンに使う1枚を選んでください。</p>
+          <div id="skillPool" class="skill-grid compact-skill-grid"></div>
         </section>
 
-        <section class="panel side-panel">
-          <div class="usage-grid">
-            <div>
-              <div class="panel-head">
-                <h2>あなた</h2>
-              </div>
-              <div id="playerHand" class="used-list"></div>
+        <section class="side-stack">
+          <section class="panel mini-panel">
+            <div class="section-heading compact-heading">
+              <h3>公開</h3>
+              <div class="result-badge" id="resultBadge">BATTLE</div>
             </div>
-            <div>
-              <div class="panel-head">
-                <h2>CPU</h2>
-              </div>
-              <div id="cpuHand" class="used-list"></div>
-            </div>
-          </div>
+            <p id="revealText" class="reveal-line">1ターン目のカードを選んでください</p>
+          </section>
 
-          <div class="panel-head log-head">
-            <h2>ログ</h2>
-            <span class="tiny-note">要約</span>
-          </div>
-          <div id="battleLog" class="log-list"></div>
+          <section class="panel mini-panel">
+            <div class="section-heading compact-heading">
+              <h3>CPUスキル</h3>
+              <span>使用状況</span>
+            </div>
+            <div id="cpuHand" class="hand-grid cpu-grid compact-hand-grid"></div>
+          </section>
+
+          <section class="panel mini-panel">
+            <div class="section-heading compact-heading">
+              <h3>バトルログ</h3>
+              <span>要約</span>
+            </div>
+            <div id="battleLog" class="log-list compact-log"></div>
+          </section>
         </section>
       </section>
+    </main>
 
-      <template id="skillCardTemplate">
-        <button class="skill-card" type="button">
+    <template id="skillCardTemplate">
+      <button class="skill-card compact-card" type="button">
+        <div class="skill-header">
           <strong class="skill-name"></strong>
           <span class="skill-tag"></span>
-          <p class="skill-description"></p>
-        </button>
-      </template>
-    </main>
+        </div>
+        <p class="skill-description"></p>
+        <div class="skill-footer">
+          <span class="skill-power"></span>
+          <span class="skill-state"></span>
+        </div>
+      </button>
+    </template>
 
     <script src="./script.js"></script>
   </body>
