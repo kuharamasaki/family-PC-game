@@ -92,6 +92,17 @@ const SKILLS = [
   },
 ];
 
+const BGM_TRACKS = {
+  "last-card": {
+    label: "最後の一枚",
+    src: "./assets/audio/last-card.mp3",
+  },
+  "blade-edge": {
+    label: "カードの刃先",
+    src: "./assets/audio/blade-edge.mp3",
+  },
+};
+
 const state = {
   phase: "character",
   playerCharacter: null,
@@ -106,11 +117,14 @@ const state = {
   lastReveal: null,
   logEntries: [],
   winner: null,
+  resolving: false,
+  bgmTrack: "last-card",
   soundEnabled: true,
   resultReason: "勝負の決め手がここに出ます。",
 };
 
 const els = {
+  body: document.body,
   playerName: document.querySelector("#playerName"),
   cpuName: document.querySelector("#cpuName"),
   playerHp: document.querySelector("#playerHp"),
@@ -137,6 +151,9 @@ const els = {
   battleLog: document.querySelector("#battleLog"),
   resultBadge: document.querySelector("#resultBadge"),
   revealPanel: document.querySelector("#revealPanel"),
+  playerCard: document.querySelector(".hp-card.player"),
+  cpuCard: document.querySelector(".hp-card.cpu"),
+  bgmSelect: document.querySelector("#bgmSelect"),
   soundButton: document.querySelector("#soundButton"),
   resetButton: document.querySelector("#resetButton"),
   characterTemplate: document.querySelector("#characterCardTemplate"),
@@ -145,10 +162,25 @@ const els = {
 
 const audio = {
   ctx: null,
+  bgmEl: null,
 };
+
+const ANIMATION_CLASSES = [
+  "is-acting",
+  "action-attack",
+  "action-heavy",
+  "action-guard",
+  "action-charge",
+  "action-counter",
+  "is-hit",
+  "is-guarding",
+  "is-casting",
+  "screen-flash",
+];
 
 function resetGame() {
   state.soundEnabled = loadSoundPreference();
+  state.bgmTrack = loadBgmPreference();
   state.phase = "character";
   state.playerCharacter = null;
   state.cpuCharacter = null;
@@ -162,7 +194,9 @@ function resetGame() {
   state.lastReveal = null;
   state.logEntries = [{ label: "開始", text: "まずはキャラクターを選択" }];
   state.winner = null;
+  state.resolving = false;
   state.resultReason = "勝負の決め手がここに出ます。";
+  stopBgm();
   render();
 }
 
@@ -182,6 +216,7 @@ function chooseCharacter(characterId) {
   state.logEntries = [{ label: "開始", text: `${state.playerCharacter.name} vs ${state.cpuCharacter.name}` }];
   state.resultReason = `${state.cpuCharacter.name}は${state.cpuCharacter.style}で応戦。`;
   playSound("select");
+  startBgmLoop();
   render();
 }
 
@@ -191,7 +226,7 @@ function chooseCpuCharacter(playerCharacterId) {
 }
 
 function toggleSkill(skillId) {
-  if (state.phase !== "battle") return;
+  if (state.phase !== "battle" || state.resolving) return;
   const card = state.playerHand.find((entry) => entry.id === skillId);
   if (!card || card.used) return;
   playSound("select");
@@ -199,31 +234,40 @@ function toggleSkill(skillId) {
 }
 
 function resolveTurn(playerSkillId) {
-  if (state.phase !== "battle") return;
+  if (state.phase !== "battle" || state.resolving) return;
 
   const cpuSkillId = chooseCpuSkill();
   const playerSkill = getSkill(playerSkillId);
   const cpuSkill = getSkill(cpuSkillId);
+  state.resolving = true;
+  startBgmLoop();
+  triggerSkillAnimations(playerSkill, cpuSkill);
+  els.revealText.textContent = `あなた ${playerSkill.name} / CPU ${cpuSkill.name}`;
+  els.resultReason.textContent = "スキル発動中...";
 
-  markUsed(state.playerHand, playerSkillId);
-  markUsed(state.cpuHand, cpuSkillId);
+  window.setTimeout(() => {
+    markUsed(state.playerHand, playerSkillId);
+    markUsed(state.cpuHand, cpuSkillId);
 
-  const summary = executeResolution(playerSkill, cpuSkill);
-  state.lastReveal = { playerSkill, cpuSkill };
-  state.logEntries.unshift({
-    label: `T${state.turn}`,
-    text: `${playerSkill.name} / ${cpuSkill.name} | ${summary.short}`,
-  });
+    const summary = executeResolution(playerSkill, cpuSkill);
+    state.lastReveal = { playerSkill, cpuSkill };
+    state.logEntries.unshift({
+      label: `T${state.turn}`,
+      text: `${playerSkill.name} / ${cpuSkill.name} | ${summary.short}`,
+    });
 
-  triggerRevealPulse();
-  playTurnSounds(summary.notes, playerSkill, cpuSkill);
+    triggerRevealPulse();
+    triggerOutcomeAnimations(summary.notes);
+    playTurnSounds(summary.notes, playerSkill, cpuSkill);
+    state.resolving = false;
 
-  if (state.playerHp <= 0 || state.cpuHp <= 0 || state.turn >= 3) {
-    finishBattle(summary.reason);
-  } else {
-    state.turn += 1;
-    render();
-  }
+    if (state.playerHp <= 0 || state.cpuHp <= 0 || state.turn >= 3) {
+      finishBattle(summary.reason);
+    } else {
+      state.turn += 1;
+      render();
+    }
+  }, 640);
 }
 
 function chooseCpuSkill() {
@@ -409,12 +453,51 @@ function ensureAudioContext() {
   return audio.ctx;
 }
 
+function stopBgm() {
+  if (!audio.bgmEl) return;
+  audio.bgmEl.pause();
+  audio.bgmEl.currentTime = 0;
+}
+
+function startBgmLoop() {
+  if (!state.soundEnabled) return;
+  const track = BGM_TRACKS[state.bgmTrack] ?? BGM_TRACKS["last-card"];
+  if (!audio.bgmEl) {
+    audio.bgmEl = new Audio(track.src);
+    audio.bgmEl.loop = true;
+    audio.bgmEl.volume = 0.32;
+  } else if (!audio.bgmEl.src.endsWith(track.src.replace("./", ""))) {
+    const wasPlaying = !audio.bgmEl.paused;
+    audio.bgmEl.pause();
+    audio.bgmEl = new Audio(track.src);
+    audio.bgmEl.loop = true;
+    audio.bgmEl.volume = 0.32;
+    if (!wasPlaying) return;
+  }
+
+  const playPromise = audio.bgmEl.play();
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(() => {
+      // Playback can fail until the user has interacted with the page.
+    });
+  }
+}
+
 function loadSoundPreference() {
   try {
     const saved = window.localStorage.getItem("deckBattleSoundEnabled");
     return saved === null ? true : saved === "true";
   } catch {
     return true;
+  }
+}
+
+function loadBgmPreference() {
+  try {
+    const saved = window.localStorage.getItem("deckBattleBgmTrack");
+    return saved && BGM_TRACKS[saved] ? saved : "last-card";
+  } catch {
+    return "last-card";
   }
 }
 
@@ -426,12 +509,60 @@ function saveSoundPreference() {
   }
 }
 
+function saveBgmPreference() {
+  try {
+    window.localStorage.setItem("deckBattleBgmTrack", state.bgmTrack);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 function triggerRevealPulse() {
   if (!els.revealPanel) return;
   els.revealPanel.classList.remove("is-revealed");
   window.requestAnimationFrame(() => {
     els.revealPanel.classList.add("is-revealed");
   });
+}
+
+function pulseElement(element, ...classNames) {
+  if (!element) return;
+  ANIMATION_CLASSES.forEach((className) => element.classList.remove(className));
+  void element.offsetWidth;
+  classNames.forEach((className) => element.classList.add(className));
+}
+
+function skillAnimationClass(skillId) {
+  const classMap = {
+    attack: "action-attack",
+    heavy: "action-heavy",
+    guard: "action-guard",
+    charge: "action-charge",
+    counter: "action-counter",
+  };
+  return classMap[skillId] ?? "is-acting";
+}
+
+function triggerSkillAnimations(playerSkill, cpuSkill) {
+  pulseElement(els.playerCard, "is-acting", skillAnimationClass(playerSkill.id));
+  pulseElement(els.cpuCard, "is-acting", skillAnimationClass(cpuSkill.id));
+  pulseElement(els.revealPanel, "is-casting");
+
+  if (isAttackSkill(playerSkill) || isAttackSkill(cpuSkill)) {
+    pulseElement(els.body, "screen-flash");
+  }
+}
+
+function triggerOutcomeAnimations(notes) {
+  const playerDamaged = notes.some((note) => note.startsWith("自-") || note.startsWith("自反動-"));
+  const cpuDamaged = notes.some((note) => note.startsWith("敵-") || note.startsWith("敵反動-"));
+  const playerGuarded = notes.includes("自防御");
+  const cpuGuarded = notes.includes("敵防御");
+
+  if (playerDamaged) pulseElement(els.playerCard, "is-hit");
+  if (cpuDamaged) pulseElement(els.cpuCard, "is-hit");
+  if (playerGuarded) pulseElement(els.playerCard, "is-guarding");
+  if (cpuGuarded) pulseElement(els.cpuCard, "is-guarding");
 }
 
 function scheduleTone(ctx, frequency, start, duration, gainValue, type = "triangle") {
@@ -478,6 +609,13 @@ function playSound(kind) {
     return;
   }
 
+  if (kind === "smash") {
+    scheduleTone(ctx, 160, now, 0.03, 0.06, "square");
+    scheduleTone(ctx, 98, now + 0.012, 0.08, 0.05, "sawtooth");
+    scheduleTone(ctx, 64, now + 0.022, 0.12, 0.04, "triangle");
+    return;
+  }
+
   if (kind === "heavy") {
     scheduleTone(ctx, 120, now, 0.1, 0.04, "sawtooth");
     scheduleTone(ctx, 90, now + 0.04, 0.16, 0.035, "square");
@@ -518,6 +656,7 @@ function playSound(kind) {
 
 function playTurnSounds(notes, playerSkill, cpuSkill) {
   const attackCommitted = isAttackSkill(playerSkill) || isAttackSkill(cpuSkill);
+  const heavyCommitted = playerSkill.id === "heavy" || cpuSkill.id === "heavy";
 
   if (notes.some((note) => note.includes("防御"))) {
     playSound("block");
@@ -528,15 +667,17 @@ function playTurnSounds(notes, playerSkill, cpuSkill) {
   if (notes.some((note) => note.includes("反動"))) {
     playSound("counter");
     playSound("heavy");
+    playSound("smash");
     return;
   }
   if (attackCommitted) {
     playSound("impact");
+    playSound("smash");
   }
   if (notes.some((note) => note.includes("-30"))) {
     playSound("counter");
   }
-  if (notes.some((note) => note.includes("-5") || note.includes("-6") || note.includes("-7"))) {
+  if (heavyCommitted || notes.some((note) => note.includes("-5") || note.includes("-6") || note.includes("-7"))) {
     playSound("heavy");
   } else if (notes.some((note) => note.includes("-"))) {
     playSound("hit");
@@ -597,6 +738,7 @@ function renderHeader() {
 
   els.soundButton.textContent = state.soundEnabled ? "音 ON" : "音 OFF";
   els.soundButton.setAttribute("aria-pressed", String(state.soundEnabled));
+  els.bgmSelect.value = state.bgmTrack;
 }
 
 function renderCharacterPool() {
@@ -650,7 +792,7 @@ function renderSkillPool() {
     card.classList.toggle("selected", available);
     card.classList.toggle("used", playerCard?.used);
     card.classList.toggle("boosted", boosted);
-    card.disabled = !available;
+    card.disabled = !available || state.resolving;
     card.querySelector(".skill-state").textContent = playerCard?.used ? "使用済み" : boosted ? "強化中" : "選択可";
     card.addEventListener("click", () => toggleSkill(skill.id));
     els.skillPool.appendChild(card);
@@ -722,6 +864,21 @@ els.soundButton.addEventListener("click", () => {
   saveSoundPreference();
   if (state.soundEnabled) {
     playSound("select");
+    startBgmLoop();
+  } else {
+    stopBgm();
+  }
+  renderHeader();
+});
+
+els.bgmSelect.addEventListener("change", (event) => {
+  const nextTrack = event.target.value;
+  if (!BGM_TRACKS[nextTrack]) return;
+  state.bgmTrack = nextTrack;
+  saveBgmPreference();
+  if (state.soundEnabled) {
+    stopBgm();
+    startBgmLoop();
   }
   renderHeader();
 });
