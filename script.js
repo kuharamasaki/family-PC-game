@@ -104,6 +104,7 @@ const BGM_TRACKS = {
 };
 
 const state = {
+  mode: "cpu",
   phase: "character",
   playerCharacter: null,
   cpuCharacter: null,
@@ -114,6 +115,9 @@ const state = {
   turn: 1,
   playerHand: [],
   cpuHand: [],
+  pendingPlayerSkill: null,
+  pendingCpuSkill: null,
+  currentChooser: "player",
   lastReveal: null,
   logEntries: [],
   winner: null,
@@ -153,6 +157,7 @@ const els = {
   revealPanel: document.querySelector("#revealPanel"),
   playerCard: document.querySelector(".hp-card.player"),
   cpuCard: document.querySelector(".hp-card.cpu"),
+  modeSelect: document.querySelector("#modeSelect"),
   bgmSelect: document.querySelector("#bgmSelect"),
   soundButton: document.querySelector("#soundButton"),
   resetButton: document.querySelector("#resetButton"),
@@ -181,6 +186,7 @@ const ANIMATION_CLASSES = [
 function resetGame() {
   state.soundEnabled = loadSoundPreference();
   state.bgmTrack = loadBgmPreference();
+  state.mode = loadModePreference();
   state.phase = "character";
   state.playerCharacter = null;
   state.cpuCharacter = null;
@@ -191,6 +197,9 @@ function resetGame() {
   state.turn = 1;
   state.playerHand = [];
   state.cpuHand = [];
+  state.pendingPlayerSkill = null;
+  state.pendingCpuSkill = null;
+  state.currentChooser = "player";
   state.lastReveal = null;
   state.logEntries = [{ label: "開始", text: "まずはキャラクターを選択" }];
   state.winner = null;
@@ -202,8 +211,30 @@ function resetGame() {
 
 function chooseCharacter(characterId) {
   if (state.phase !== "character") return;
-  state.playerCharacter = getCharacter(characterId);
+  const chosen = getCharacter(characterId);
+
+  if (state.mode === "pvp" && state.currentChooser === "cpu") {
+    if (state.playerCharacter?.id === characterId) return;
+    state.cpuCharacter = chosen;
+    beginBattle();
+    return;
+  }
+
+  state.playerCharacter = chosen;
+  if (state.mode === "pvp") {
+    state.currentChooser = "cpu";
+    state.logEntries = [{ label: "開始", text: "PLAYER 1 の次は PLAYER 2 がキャラを選択" }];
+    state.resultReason = "端末を PLAYER 2 に渡してキャラクターを選んでください。";
+    playSound("select");
+    render();
+    return;
+  }
+
   state.cpuCharacter = chooseCpuCharacter(characterId);
+  beginBattle();
+}
+
+function beginBattle() {
   state.playerHp = state.playerCharacter.hp;
   state.cpuHp = state.cpuCharacter.hp;
   state.playerCharge = 0;
@@ -211,10 +242,16 @@ function chooseCharacter(characterId) {
   state.turn = 1;
   state.playerHand = SKILLS.map((skill) => ({ id: skill.id, used: false }));
   state.cpuHand = SKILLS.map((skill) => ({ id: skill.id, used: false }));
+  state.pendingPlayerSkill = null;
+  state.pendingCpuSkill = null;
+  state.currentChooser = "player";
   state.lastReveal = null;
   state.phase = "battle";
   state.logEntries = [{ label: "開始", text: `${state.playerCharacter.name} vs ${state.cpuCharacter.name}` }];
-  state.resultReason = `${state.cpuCharacter.name}は${state.cpuCharacter.style}で応戦。`;
+  state.resultReason =
+    state.mode === "cpu"
+      ? `${state.cpuCharacter.name}は${state.cpuCharacter.style}で応戦。`
+      : "PLAYER 1 がこのターンのスキルを選択してください。";
   playSound("select");
   startBgmLoop();
   render();
@@ -227,16 +264,38 @@ function chooseCpuCharacter(playerCharacterId) {
 
 function toggleSkill(skillId) {
   if (state.phase !== "battle" || state.resolving) return;
-  const card = state.playerHand.find((entry) => entry.id === skillId);
+  const activeHand = state.currentChooser === "player" ? state.playerHand : state.cpuHand;
+  const card = activeHand.find((entry) => entry.id === skillId);
   if (!card || card.used) return;
   playSound("select");
+
+  if (state.mode === "pvp") {
+    queuePvpSkill(skillId);
+    return;
+  }
+
   resolveTurn(skillId);
 }
 
-function resolveTurn(playerSkillId) {
+function queuePvpSkill(skillId) {
+  if (state.currentChooser === "player") {
+    state.pendingPlayerSkill = skillId;
+    state.currentChooser = "cpu";
+    state.lastReveal = null;
+    state.resultReason = "PLAYER 2 がこのターンのスキルを選択してください。";
+    state.logEntries.unshift({ label: `T${state.turn}`, text: "PLAYER 1 がスキルを選択" });
+    render();
+    return;
+  }
+
+  state.pendingCpuSkill = skillId;
+  resolveTurn(state.pendingPlayerSkill, state.pendingCpuSkill);
+}
+
+function resolveTurn(playerSkillId, forcedCpuSkillId = null) {
   if (state.phase !== "battle" || state.resolving) return;
 
-  const cpuSkillId = chooseCpuSkill();
+  const cpuSkillId = forcedCpuSkillId ?? chooseCpuSkill();
   const playerSkill = getSkill(playerSkillId);
   const cpuSkill = getSkill(cpuSkillId);
   state.resolving = true;
@@ -260,6 +319,9 @@ function resolveTurn(playerSkillId) {
     triggerOutcomeAnimations(summary.notes);
     playTurnSounds(summary.notes, playerSkill, cpuSkill);
     state.resolving = false;
+    state.pendingPlayerSkill = null;
+    state.pendingCpuSkill = null;
+    state.currentChooser = "player";
 
     if (state.playerHp <= 0 || state.cpuHp <= 0 || state.turn >= 3) {
       finishBattle(summary.reason);
@@ -298,6 +360,10 @@ function getSkill(id) {
 
 function remainingPlayerCards() {
   return state.playerHand.filter((card) => !card.used).map((card) => card.id);
+}
+
+function remainingOpponentCards() {
+  return state.cpuHand.filter((card) => !card.used).map((card) => card.id);
 }
 
 function markUsed(hand, skillId) {
@@ -501,6 +567,15 @@ function loadBgmPreference() {
   }
 }
 
+function loadModePreference() {
+  try {
+    const saved = window.localStorage.getItem("deckBattleMode");
+    return saved === "pvp" ? "pvp" : "cpu";
+  } catch {
+    return "cpu";
+  }
+}
+
 function saveSoundPreference() {
   try {
     window.localStorage.setItem("deckBattleSoundEnabled", String(state.soundEnabled));
@@ -512,6 +587,14 @@ function saveSoundPreference() {
 function saveBgmPreference() {
   try {
     window.localStorage.setItem("deckBattleBgmTrack", state.bgmTrack);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function saveModePreference() {
+  try {
+    window.localStorage.setItem("deckBattleMode", state.mode);
   } catch {
     // Ignore storage failures.
   }
@@ -697,14 +780,14 @@ function renderHeader() {
   const playerMax = state.playerCharacter ? state.playerCharacter.hp : MAX_HP;
   const cpuMax = state.cpuCharacter ? state.cpuCharacter.hp : MAX_HP;
   els.playerName.textContent = state.playerCharacter ? state.playerCharacter.name : "PLAYER";
-  els.cpuName.textContent = state.cpuCharacter ? state.cpuCharacter.name : "CPU";
+  els.cpuName.textContent = state.cpuCharacter ? state.cpuCharacter.name : state.mode === "pvp" ? "PLAYER 2" : "CPU";
   els.playerHp.textContent = `${state.playerHp} / ${playerMax}`;
   els.cpuHp.textContent = `${state.cpuHp} / ${cpuMax}`;
   els.playerHpFill.style.width = `${playerMax ? (state.playerHp / playerMax) * 100 : 0}%`;
   els.cpuHpFill.style.width = `${cpuMax ? (state.cpuHp / cpuMax) * 100 : 0}%`;
   els.playerCharge.textContent = `溜め +${state.playerCharge}`;
   els.cpuCharge.textContent = `溜め +${state.cpuCharge}`;
-  els.cpuStyle.textContent = state.cpuCharacter ? `${state.cpuCharacter.style}AI` : "標準AI";
+  els.cpuStyle.textContent = state.cpuCharacter ? `${state.cpuCharacter.style}${state.mode === "pvp" ? "" : "AI"}` : state.mode === "pvp" ? "PLAYER 2" : "標準AI";
   els.playerAvatar.dataset.character = state.playerCharacter?.id ?? "neutral";
   els.cpuAvatar.dataset.character = state.cpuCharacter?.id ?? "neutral";
   setAvatarImage(els.playerAvatarImg, state.playerCharacter);
@@ -715,7 +798,10 @@ function renderHeader() {
     els.turnLabel.textContent = "準備中";
     els.leftTitle.textContent = "キャラクター選択";
     els.selectionCounter.textContent = `${CHARACTERS.length}体から選択`;
-    els.statusText.textContent = "キャラクターを選ぶと、攻撃力・防御力・HPが対戦に反映されます。";
+    els.statusText.textContent =
+      state.mode === "pvp" && state.currentChooser === "cpu"
+        ? "PLAYER 2 のキャラクターを選ぶと対戦開始です。"
+        : "キャラクターを選ぶと、攻撃力・防御力・HPが対戦に反映されます。";
     els.resultReason.textContent = state.resultReason;
     setBadge("READY");
   } else if (state.phase === "battle") {
@@ -723,7 +809,12 @@ function renderHeader() {
     els.turnLabel.textContent = `${state.turn} / 3`;
     els.leftTitle.textContent = "スキル状況";
     els.selectionCounter.textContent = `${remainingPlayerCards().length} / 5 使用可能`;
-    els.statusText.textContent = `残り${remainingPlayerCards().length}枚。 このターンに使う1枚を選んでください。`;
+    els.statusText.textContent =
+      state.mode === "pvp"
+        ? state.currentChooser === "player"
+          ? `PLAYER 1 の番です。残り${remainingPlayerCards().length}枚から1枚選んでください。`
+          : `PLAYER 2 の番です。残り${remainingOpponentCards().length}枚から1枚選んでください。`
+        : `残り${remainingPlayerCards().length}枚。 このターンに使う1枚を選んでください。`;
     els.resultReason.textContent = state.resultReason;
     setBadge("BATTLE");
   } else {
@@ -738,6 +829,7 @@ function renderHeader() {
 
   els.soundButton.textContent = state.soundEnabled ? "音 ON" : "音 OFF";
   els.soundButton.setAttribute("aria-pressed", String(state.soundEnabled));
+  els.modeSelect.value = state.mode;
   els.bgmSelect.value = state.bgmTrack;
 }
 
@@ -748,6 +840,7 @@ function renderCharacterPool() {
   if (state.phase !== "character") return;
 
   CHARACTERS.forEach((character) => {
+    if (state.mode === "pvp" && state.currentChooser === "cpu" && state.playerCharacter?.id === character.id) return;
     const card = els.characterTemplate.content.firstElementChild.cloneNode(true);
     card.querySelector(".character-avatar").dataset.character = character.id;
     const photo = card.querySelector(".character-photo");
@@ -785,9 +878,11 @@ function renderSkillPool() {
 
   SKILLS.forEach((skill) => {
     const card = buildCard(skill);
-    const playerCard = state.playerHand.find((entry) => entry.id === skill.id);
+    const activeHand = state.currentChooser === "player" ? state.playerHand : state.cpuHand;
+    const activeCharge = state.currentChooser === "player" ? state.playerCharge : state.cpuCharge;
+    const playerCard = activeHand.find((entry) => entry.id === skill.id);
     const available = Boolean(playerCard) && !playerCard.used && state.phase === "battle";
-    const boosted = available && state.playerCharge > 0 && ["attack", "heavy"].includes(skill.id);
+    const boosted = available && activeCharge > 0 && ["attack", "heavy"].includes(skill.id);
 
     card.classList.toggle("selected", available);
     card.classList.toggle("used", playerCard?.used);
@@ -815,14 +910,23 @@ function renderCpuHand() {
 
 function renderReveal() {
   if (state.phase === "character") {
-    els.revealText.textContent = "キャラクターを選んでください";
+    els.revealText.textContent =
+      state.mode === "pvp" && state.currentChooser === "cpu" ? "PLAYER 2 のキャラクターを選んでください" : "キャラクターを選んでください";
     return;
   }
   if (!state.lastReveal) {
-    els.revealText.textContent = "1ターン目のカードを選んでください";
+    els.revealText.textContent =
+      state.mode === "pvp"
+        ? state.currentChooser === "player"
+          ? "PLAYER 1 のカードを選んでください"
+          : "PLAYER 2 のカードを選んでください"
+        : "1ターン目のカードを選んでください";
     return;
   }
-  els.revealText.textContent = `あなた ${state.lastReveal.playerSkill.name} / CPU ${state.lastReveal.cpuSkill.name}`;
+  els.revealText.textContent =
+    state.mode === "pvp"
+      ? `PLAYER 1 ${state.lastReveal.playerSkill.name} / PLAYER 2 ${state.lastReveal.cpuSkill.name}`
+      : `あなた ${state.lastReveal.playerSkill.name} / CPU ${state.lastReveal.cpuSkill.name}`;
   els.revealPanel.classList.remove("is-revealed");
   void els.revealPanel.offsetWidth;
   els.revealPanel.classList.add("is-revealed");
@@ -869,6 +973,12 @@ els.soundButton.addEventListener("click", () => {
     stopBgm();
   }
   renderHeader();
+});
+
+els.modeSelect.addEventListener("change", (event) => {
+  state.mode = event.target.value === "pvp" ? "pvp" : "cpu";
+  saveModePreference();
+  resetGame();
 });
 
 els.bgmSelect.addEventListener("change", (event) => {

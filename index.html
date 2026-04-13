@@ -17,14 +17,28 @@
       <section class="top-banner">
         <div class="title-phase-wrap">
           <div class="title-block">
-            <p class="eyebrow">3ターン / 毎ターン1枚選択 / 同時公開</p>
+            <p class="eyebrow">3ターン / ターン1回選択 / 同時公開</p>
             <h1>10secondsデッキバトル</h1>
-            <p class="hero-copy">短いのに読み合いが残る、CPU対戦の超短期バトル。</p>
+            <p class="hero-copy">短いのに読み合いが残る、CPU対戦と2人対戦に対応した超短期バトル。</p>
+            <section class="title-log-panel">
+              <div class="section-heading compact-heading">
+                <h3>バトルログ</h3>
+                <span>最新3件</span>
+              </div>
+              <div id="battleLog" class="log-list compact-log title-log-list"></div>
+            </section>
           </div>
           <div class="phase-block">
             <p class="phase-label">現在フェーズ</p>
             <h2 id="phaseTitle">キャラ選択</h2>
             <strong id="turnLabel">準備中</strong>
+            <label class="bgm-select-wrap">
+              <span>対戦モード</span>
+              <select id="modeSelect" class="bgm-select">
+                <option value="cpu">CPU対戦</option>
+                <option value="pvp">2人対戦</option>
+              </select>
+            </label>
             <label class="bgm-select-wrap">
               <span>BGM</span>
               <select id="bgmSelect" class="bgm-select">
@@ -34,7 +48,7 @@
             </label>
             <div class="phase-actions">
               <button id="soundButton" class="sound-button" type="button" aria-pressed="true">音 ON</button>
-              <button id="resetButton" class="secondary-button">もう1回</button>
+              <button id="resetButton" class="secondary-button" type="button">もう1回</button>
             </div>
           </div>
         </div>
@@ -101,14 +115,6 @@
               <span id="cpuStyle">標準AI</span>
             </div>
             <div id="cpuHand" class="hand-grid cpu-grid compact-hand-grid"></div>
-          </section>
-
-          <section class="panel mini-panel">
-            <div class="section-heading compact-heading">
-              <h3>バトルログ</h3>
-              <span>要約</span>
-            </div>
-            <div id="battleLog" class="log-list compact-log"></div>
           </section>
         </section>
       </section>
