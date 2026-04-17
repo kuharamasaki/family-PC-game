@@ -92,6 +92,8 @@ const SKILLS = [
   },
 ];
 
+const TOTAL_TURNS = SKILLS.length;
+
 const BGM_TRACKS = {
   "last-card": {
     label: "最後の一枚",
@@ -323,7 +325,7 @@ function resolveTurn(playerSkillId, forcedCpuSkillId = null) {
     state.pendingCpuSkill = null;
     state.currentChooser = "player";
 
-    if (state.playerHp <= 0 || state.cpuHp <= 0 || state.turn >= 3) {
+    if (state.playerHp <= 0 || state.cpuHp <= 0 || state.turn >= TOTAL_TURNS) {
       finishBattle(summary.reason);
     } else {
       state.turn += 1;
@@ -806,9 +808,9 @@ function renderHeader() {
     setBadge("READY");
   } else if (state.phase === "battle") {
     els.phaseTitle.textContent = `第${state.turn}ターン`;
-    els.turnLabel.textContent = `${state.turn} / 3`;
+    els.turnLabel.textContent = `${state.turn} / ${TOTAL_TURNS}`;
     els.leftTitle.textContent = "スキル状況";
-    els.selectionCounter.textContent = `${remainingPlayerCards().length} / 5 使用可能`;
+    els.selectionCounter.textContent = `${remainingPlayerCards().length} / ${TOTAL_TURNS} 使用可能`;
     els.statusText.textContent =
       state.mode === "pvp"
         ? state.currentChooser === "player"
@@ -821,7 +823,7 @@ function renderHeader() {
     els.phaseTitle.textContent = "結果";
     els.turnLabel.textContent = "END";
     els.leftTitle.textContent = "スキル状況";
-    els.selectionCounter.textContent = `${remainingPlayerCards().length} / 5 使用可能`;
+    els.selectionCounter.textContent = `${remainingPlayerCards().length} / ${TOTAL_TURNS} 使用可能`;
     els.statusText.textContent = resultMessage();
     els.resultReason.textContent = state.resultReason;
     setBadge(state.winner === "win" ? "WIN" : state.winner === "lose" ? "LOSE" : "DRAW", state.winner);
