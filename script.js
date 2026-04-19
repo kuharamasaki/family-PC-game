@@ -15,11 +15,11 @@ const CHARACTERS = [
 ];
 
 const SKILLS = [
-  { id: "attack", name: "攻撃", tag: "基本", description: "通常攻撃。ためがあると次の一撃が強くなる。", power: "ATK 30" },
-  { id: "guard", name: "防御", tag: "守り", description: "楯のホログラムを出してこのターンの攻撃を防ぐ。", power: "BLOCK" },
-  { id: "charge", name: "溜め", tag: "気合", description: "気合をためて次の攻撃と強攻撃を強化する。", power: "+20" },
-  { id: "heavy", name: "強攻撃", tag: "大技", description: "大きいダメージ。防御されると止まり、カウンターに弱い。", power: "ATK 50" },
-  { id: "counter", name: "カウンター", tag: "読み", description: "攻撃をかわして殴り返す。成功時はダメージを受けない。", power: "CTR 30" },
+  { id: "attack", name: "攻撃", tag: "基本", description: "通常の一撃。", power: "ATK 30" },
+  { id: "guard", name: "防御", tag: "守り", description: "攻撃を防ぐ。", power: "BLOCK" },
+  { id: "charge", name: "溜め", tag: "気合", description: "次の攻撃を強化。", power: "+20" },
+  { id: "heavy", name: "強攻撃", tag: "大技", description: "高威力のビーム。", power: "ATK 50" },
+  { id: "counter", name: "カウンター", tag: "読み", description: "かわして反撃。", power: "CTR 30" },
 ];
 
 const BGM_TRACKS = {
@@ -516,7 +516,7 @@ function skillAnimationClass(skillId) {
 
 function showEffect(target, characterId, skillId) {
   if (!target) return;
-  const text = EFFECT_LABELS[characterId]?.[skillId] ?? "スキル";
+  const text = skillId === "heavy" ? "" : EFFECT_LABELS[characterId]?.[skillId] ?? "スキル";
   target.textContent = text;
   target.className = `fighter-effect ${skillId} show`;
 }

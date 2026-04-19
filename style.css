@@ -308,7 +308,7 @@ p {
 .fighter-effect {
   position: absolute;
   z-index: 2;
-  top: 22px;
+  top: 10px;
   left: 50%;
   transform: translateX(-50%) scale(0.8);
   min-width: 120px;
@@ -333,10 +333,32 @@ p {
 }
 
 .fighter-effect.heavy {
-  color: #dff8ff;
-  background: linear-gradient(90deg, rgba(90, 219, 255, 0.18), rgba(146, 234, 255, 0.3));
-  border-color: rgba(173, 236, 255, 0.42);
-  box-shadow: 0 0 30px rgba(92, 220, 255, 0.34);
+  min-width: 0;
+  width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.fighter-effect.heavy::before {
+  content: "";
+  position: absolute;
+  top: 118px;
+  width: 220px;
+  height: 16px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(170, 245, 255, 0), rgba(170, 245, 255, 0.85) 30%, rgba(225, 252, 255, 1) 50%, rgba(170, 245, 255, 0.85) 70%, rgba(170, 245, 255, 0));
+  box-shadow: 0 0 18px rgba(104, 228, 255, 0.48);
+}
+
+.player-column .fighter-effect.heavy::before {
+  left: 96px;
+}
+
+.cpu-column .fighter-effect.heavy::before {
+  right: 96px;
 }
 
 .fighter-effect.counter {
