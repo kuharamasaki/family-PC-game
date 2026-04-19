@@ -19,7 +19,7 @@
           <div class="title-block">
             <p class="eyebrow">5ターン / ターン1回選択 / 全カード使用</p>
             <h1>10secondsデッキバトル</h1>
-            <p class="hero-copy">短いのに読み合いが残る、CPU対戦と2人対戦に対応した超短期バトル。</p>
+            <p class="hero-copy">左に味方、右に敵。読み合いで勝つ短期バトルゲーム。</p>
             <section class="title-log-panel">
               <div class="section-heading compact-heading">
                 <h3>バトルログ</h3>
@@ -52,71 +52,94 @@
             </div>
           </div>
         </div>
+      </section>
 
-        <div class="status-row">
-          <article class="hp-card player">
-            <div class="hp-card-top">
-              <div id="playerAvatar" class="status-avatar" data-character="neutral" aria-hidden="true">
-                <img id="playerAvatarImg" class="status-photo" src="" alt="" />
-              </div>
-              <div class="hp-info">
-                <div class="hp-head">
-                  <span id="playerName">PLAYER</span>
-                  <strong id="playerHp">0 / 100</strong>
+      <section class="panel arena-panel">
+        <div class="arena-stage">
+          <section class="fighter-column player-column">
+            <div id="playerFighter" class="fighter-card player-fighter" data-side="player" data-character="neutral">
+              <div class="fighter-base"></div>
+              <div id="playerEffect" class="fighter-effect"></div>
+              <img id="playerStageImg" class="stage-photo" src="" alt="" />
+            </div>
+
+            <article class="hp-card player battle-hud">
+              <div class="hp-card-top">
+                <div id="playerAvatar" class="status-avatar" data-character="neutral" aria-hidden="true">
+                  <img id="playerAvatarImg" class="status-photo" src="" alt="" />
+                </div>
+                <div class="hp-info">
+                  <div class="hp-head">
+                    <span id="playerName">PLAYER</span>
+                    <strong id="playerHp">0 / 100</strong>
+                  </div>
+                  <small id="playerCharge">ため +0</small>
                 </div>
               </div>
-            </div>
-            <div class="hp-bar"><div id="playerHpFill" class="hp-fill"></div></div>
-            <small id="playerCharge">溜め +0</small>
-          </article>
+              <div class="hp-bar"><div id="playerHpFill" class="hp-fill"></div></div>
+            </article>
 
-          <article class="hp-card cpu">
-            <div class="hp-card-top">
-              <div id="cpuAvatar" class="status-avatar cpu-avatar" data-character="neutral" aria-hidden="true">
-                <img id="cpuAvatarImg" class="status-photo" src="" alt="" />
+            <section id="playerSkillDock" class="panel mini-panel skill-dock skill-dock-player">
+              <div class="section-heading compact-heading">
+                <h3 id="leftTitle">キャラクター選択</h3>
+                <span id="selectionCounter">5体から選択</span>
               </div>
-              <div class="hp-info">
-                <div class="hp-head">
-                  <span id="cpuName">CPU</span>
-                  <strong id="cpuHp">0 / 100</strong>
+              <p id="statusText" class="status-text">まずはキャラクターを1体選んでください。</p>
+              <div id="skillPool" class="skill-grid compact-skill-grid" hidden></div>
+            </section>
+          </section>
+
+          <section class="arena-middle">
+            <section class="panel mini-panel reveal-panel arena-reveal" id="revealPanel">
+              <div class="section-heading compact-heading">
+                <h3>公開</h3>
+                <div class="result-badge" id="resultBadge">READY</div>
+              </div>
+              <p id="revealText" class="reveal-line">キャラクターを選んでください</p>
+              <p id="resultReason" class="result-reason">勝負の決め手がここに出ます。</p>
+            </section>
+          </section>
+
+          <section class="fighter-column cpu-column">
+            <div id="cpuFighter" class="fighter-card cpu-fighter" data-side="cpu" data-character="neutral">
+              <div class="fighter-base"></div>
+              <div id="cpuEffect" class="fighter-effect"></div>
+              <img id="cpuStageImg" class="stage-photo cpu-stage-photo" src="" alt="" />
+            </div>
+
+            <article class="hp-card cpu battle-hud">
+              <div class="hp-card-top">
+                <div id="cpuAvatar" class="status-avatar cpu-avatar" data-character="neutral" aria-hidden="true">
+                  <img id="cpuAvatarImg" class="status-photo" src="" alt="" />
+                </div>
+                <div class="hp-info">
+                  <div class="hp-head">
+                    <span id="cpuName">CPU</span>
+                    <strong id="cpuHp">0 / 100</strong>
+                  </div>
+                  <small id="cpuCharge">ため +0</small>
                 </div>
               </div>
-            </div>
-            <div class="hp-bar"><div id="cpuHpFill" class="hp-fill cpu-fill"></div></div>
-            <small id="cpuCharge">溜め +0</small>
-          </article>
+              <div class="hp-bar"><div id="cpuHpFill" class="hp-fill cpu-fill"></div></div>
+            </article>
+
+            <section class="panel mini-panel cpu-panel">
+              <div class="section-heading compact-heading">
+                <h3>相手スキル</h3>
+                <span id="cpuStyle">標準AI</span>
+              </div>
+              <div id="cpuHand" class="hand-grid cpu-grid compact-hand-grid"></div>
+            </section>
+          </section>
         </div>
       </section>
 
-      <section class="content-grid">
-        <section class="panel compact-panel">
-          <div class="section-heading compact-heading">
-            <h3 id="leftTitle">キャラクター選択</h3>
-            <span id="selectionCounter">5体から選択</span>
-          </div>
-          <p id="statusText" class="status-text">まずはキャラクターを1体選んでください。</p>
-          <div id="characterPool" class="character-grid"></div>
-          <div id="skillPool" class="skill-grid compact-skill-grid" hidden></div>
-        </section>
-
-        <section class="side-stack">
-          <section class="panel mini-panel reveal-panel" id="revealPanel">
-            <div class="section-heading compact-heading">
-              <h3>公開</h3>
-              <div class="result-badge" id="resultBadge">BATTLE</div>
-            </div>
-            <p id="revealText" class="reveal-line">1ターン目のカードを選んでください</p>
-            <p id="resultReason" class="result-reason">勝負の決め手がここに出ます。</p>
-          </section>
-
-          <section class="panel mini-panel">
-            <div class="section-heading compact-heading">
-              <h3>CPUスキル</h3>
-              <span id="cpuStyle">標準AI</span>
-            </div>
-            <div id="cpuHand" class="hand-grid cpu-grid compact-hand-grid"></div>
-          </section>
-        </section>
+      <section id="setupPanel" class="panel compact-panel">
+        <div class="section-heading compact-heading">
+          <h3>キャラクター選択</h3>
+          <span>ステータス確認</span>
+        </div>
+        <div id="characterPool" class="character-grid"></div>
       </section>
     </main>
 

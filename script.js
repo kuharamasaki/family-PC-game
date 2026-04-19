@@ -1,108 +1,38 @@
+
 const MAX_HP = 100;
 const CHARGE_BONUS = 20;
+const TOTAL_TURNS = 5;
+const PLAYER_LABEL = "PLAYER 1";
+const CPU_LABEL = "CPU";
+const PLAYER2_LABEL = "PLAYER 2";
 
 const CHARACTERS = [
-  {
-    id: "cat",
-    name: "ネコ",
-    emoji: "猫",
-    attack: 70,
-    defense: 70,
-    hp: 100,
-    style: "手数型",
-    avatar: "./assets/illustrations/cat.png",
-  },
-  {
-    id: "dog",
-    name: "犬",
-    emoji: "犬",
-    attack: 50,
-    defense: 70,
-    hp: 100,
-    style: "安定型",
-    avatar: "./assets/illustrations/dog.png",
-  },
-  {
-    id: "parakeet",
-    name: "インコ",
-    emoji: "鳥",
-    attack: 70,
-    defense: 80,
-    hp: 90,
-    style: "速攻型",
-    avatar: "./assets/illustrations/parakeet.png",
-  },
-  {
-    id: "goldfish",
-    name: "金魚",
-    emoji: "魚",
-    attack: 70,
-    defense: 90,
-    hp: 80,
-    style: "耐久型",
-    avatar: "./assets/illustrations/goldfish.png",
-  },
-  {
-    id: "lizard",
-    name: "トカゲ",
-    emoji: "蜥",
-    attack: 90,
-    defense: 50,
-    hp: 100,
-    style: "強襲型",
-    avatar: "./assets/illustrations/lizard.png",
-  },
+  { id: "cat", name: "ネコ", emoji: "猫", attack: 70, defense: 70, hp: 100, style: "手数型", avatar: "./assets/illustrations/cat.png" },
+  { id: "dog", name: "犬", emoji: "犬", attack: 50, defense: 70, hp: 100, style: "安定型", avatar: "./assets/illustrations/dog.png" },
+  { id: "parakeet", name: "インコ", emoji: "鳥", attack: 70, defense: 80, hp: 90, style: "速攻型", avatar: "./assets/illustrations/parakeet.png" },
+  { id: "goldfish", name: "金魚", emoji: "魚", attack: 70, defense: 90, hp: 80, style: "耐久型", avatar: "./assets/illustrations/goldfish.png" },
+  { id: "lizard", name: "トカゲ", emoji: "蜥", attack: 90, defense: 50, hp: 100, style: "強襲型", avatar: "./assets/illustrations/lizard.png" },
 ];
 
 const SKILLS = [
-  {
-    id: "attack",
-    name: "攻撃",
-    tag: "基本",
-    description: "30ダメージ。溜めがあると次の攻撃に上乗せ。",
-    power: "ATK 30",
-  },
-  {
-    id: "guard",
-    name: "防御",
-    tag: "対策",
-    description: "このターンの被ダメージを0にする。",
-    power: "BLOCK",
-  },
-  {
-    id: "charge",
-    name: "溜め",
-    tag: "準備",
-    description: "次の攻撃系スキルに+20。効果は残る。",
-    power: "+20",
-  },
-  {
-    id: "heavy",
-    name: "強攻撃",
-    tag: "大技",
-    description: "50ダメージ。防御で0、カウンターで反動50。",
-    power: "ATK 50",
-  },
-  {
-    id: "counter",
-    name: "カウンター",
-    tag: "読み",
-    description: "相手が攻撃系なら成功し30ダメージ。",
-    power: "CTR 30",
-  },
+  { id: "attack", name: "攻撃", tag: "基本", description: "通常攻撃。ためがあると次の一撃が強くなる。", power: "ATK 30" },
+  { id: "guard", name: "防御", tag: "守り", description: "楯のホログラムを出してこのターンの攻撃を防ぐ。", power: "BLOCK" },
+  { id: "charge", name: "溜め", tag: "気合", description: "気合をためて次の攻撃と強攻撃を強化する。", power: "+20" },
+  { id: "heavy", name: "強攻撃", tag: "大技", description: "大きいダメージ。防御されると止まり、カウンターに弱い。", power: "ATK 50" },
+  { id: "counter", name: "カウンター", tag: "読み", description: "攻撃をかわして殴り返す。成功時はダメージを受けない。", power: "CTR 30" },
 ];
 
-const TOTAL_TURNS = SKILLS.length;
-
 const BGM_TRACKS = {
-  "last-card": {
-    label: "最後の一枚",
-    src: "./assets/audio/last-card.mp3",
-  },
-  "blade-edge": {
-    label: "カードの刃先",
-    src: "./assets/audio/blade-edge.mp3",
-  },
+  "last-card": { label: "最後の一枚", src: "./assets/audio/last-card.mp3" },
+  "blade-edge": { label: "カードの刃先", src: "./assets/audio/blade-edge.mp3" },
+};
+
+const EFFECT_LABELS = {
+  cat: { attack: "パンチ", heavy: "ビーム", counter: "かわして殴る", guard: "ホログラム楯", charge: "気合充填" },
+  dog: { attack: "骨アタック", heavy: "ビーム", counter: "かわして殴る", guard: "ホログラム楯", charge: "気合充填" },
+  parakeet: { attack: "つつき", heavy: "ビーム", counter: "かわして殴る", guard: "ホログラム楯", charge: "気合充填" },
+  goldfish: { attack: "水かけ", heavy: "ビーム", counter: "かわして殴る", guard: "ホログラム楯", charge: "気合充填" },
+  lizard: { attack: "しっぽ振り", heavy: "ビーム", counter: "かわして殴る", guard: "ホログラム楯", charge: "気合充填" },
 };
 
 const state = {
@@ -143,6 +73,12 @@ const els = {
   cpuAvatar: document.querySelector("#cpuAvatar"),
   playerAvatarImg: document.querySelector("#playerAvatarImg"),
   cpuAvatarImg: document.querySelector("#cpuAvatarImg"),
+  playerStageImg: document.querySelector("#playerStageImg"),
+  cpuStageImg: document.querySelector("#cpuStageImg"),
+  playerFighter: document.querySelector("#playerFighter"),
+  cpuFighter: document.querySelector("#cpuFighter"),
+  playerEffect: document.querySelector("#playerEffect"),
+  cpuEffect: document.querySelector("#cpuEffect"),
   turnLabel: document.querySelector("#turnLabel"),
   phaseTitle: document.querySelector("#phaseTitle"),
   leftTitle: document.querySelector("#leftTitle"),
@@ -157,33 +93,19 @@ const els = {
   battleLog: document.querySelector("#battleLog"),
   resultBadge: document.querySelector("#resultBadge"),
   revealPanel: document.querySelector("#revealPanel"),
-  playerCard: document.querySelector(".hp-card.player"),
-  cpuCard: document.querySelector(".hp-card.cpu"),
+  playerCard: document.querySelector(".battle-hud.player"),
+  cpuCard: document.querySelector(".battle-hud.cpu"),
   modeSelect: document.querySelector("#modeSelect"),
   bgmSelect: document.querySelector("#bgmSelect"),
   soundButton: document.querySelector("#soundButton"),
   resetButton: document.querySelector("#resetButton"),
   characterTemplate: document.querySelector("#characterCardTemplate"),
-  template: document.querySelector("#skillCardTemplate"),
+  skillTemplate: document.querySelector("#skillCardTemplate"),
+  setupPanel: document.querySelector("#setupPanel"),
 };
 
-const audio = {
-  ctx: null,
-  bgmEl: null,
-};
-
-const ANIMATION_CLASSES = [
-  "is-acting",
-  "action-attack",
-  "action-heavy",
-  "action-guard",
-  "action-charge",
-  "action-counter",
-  "is-hit",
-  "is-guarding",
-  "is-casting",
-  "screen-flash",
-];
+const audio = { ctx: null, bgmEl: null };
+const ANIMATION_CLASSES = ["is-acting", "action-attack", "action-heavy", "action-guard", "action-charge", "action-counter", "is-hit", "is-guarding", "is-casting"];
 
 function resetGame() {
   state.soundEnabled = loadSoundPreference();
@@ -203,10 +125,12 @@ function resetGame() {
   state.pendingCpuSkill = null;
   state.currentChooser = "player";
   state.lastReveal = null;
-  state.logEntries = [{ label: "開始", text: "まずはキャラクターを選択" }];
+  state.logEntries = [{ label: "開始", text: "まずはキャラクターを選んでください。" }];
   state.winner = null;
   state.resolving = false;
   state.resultReason = "勝負の決め手がここに出ます。";
+  clearEffect(els.playerEffect);
+  clearEffect(els.cpuEffect);
   stopBgm();
   render();
 }
@@ -214,6 +138,7 @@ function resetGame() {
 function chooseCharacter(characterId) {
   if (state.phase !== "character") return;
   const chosen = getCharacter(characterId);
+  if (!chosen) return;
 
   if (state.mode === "pvp" && state.currentChooser === "cpu") {
     if (state.playerCharacter?.id === characterId) return;
@@ -225,8 +150,8 @@ function chooseCharacter(characterId) {
   state.playerCharacter = chosen;
   if (state.mode === "pvp") {
     state.currentChooser = "cpu";
-    state.logEntries = [{ label: "開始", text: "PLAYER 1 の次は PLAYER 2 がキャラを選択" }];
-    state.resultReason = "端末を PLAYER 2 に渡してキャラクターを選んでください。";
+    state.logEntries = [{ label: "選択", text: "PLAYER 1 の次は PLAYER 2 がキャラを選びます。" }];
+    state.resultReason = "PLAYER 2 がキャラクターを選ぶと対戦開始です。";
     playSound("select");
     render();
     return;
@@ -250,10 +175,7 @@ function beginBattle() {
   state.lastReveal = null;
   state.phase = "battle";
   state.logEntries = [{ label: "開始", text: `${state.playerCharacter.name} vs ${state.cpuCharacter.name}` }];
-  state.resultReason =
-    state.mode === "cpu"
-      ? `${state.cpuCharacter.name}は${state.cpuCharacter.style}で応戦。`
-      : "PLAYER 1 がこのターンのスキルを選択してください。";
+  state.resultReason = state.mode === "cpu" ? `${state.cpuCharacter.name} は ${state.cpuCharacter.style} です。スキルを選んでください。` : "PLAYER 1 がこのターンのスキルを選んでください。";
   playSound("select");
   startBgmLoop();
   render();
@@ -263,7 +185,6 @@ function chooseCpuCharacter(playerCharacterId) {
   const pool = CHARACTERS.filter((character) => character.id !== playerCharacterId);
   return pool[Math.floor(Math.random() * pool.length)];
 }
-
 function toggleSkill(skillId) {
   if (state.phase !== "battle" || state.resolving) return;
   const activeHand = state.currentChooser === "player" ? state.playerHand : state.cpuHand;
@@ -284,7 +205,7 @@ function queuePvpSkill(skillId) {
     state.pendingPlayerSkill = skillId;
     state.currentChooser = "cpu";
     state.lastReveal = null;
-    state.resultReason = "PLAYER 2 がこのターンのスキルを選択してください。";
+    state.resultReason = "PLAYER 2 がこのターンのスキルを選んでください。";
     state.logEntries.unshift({ label: `T${state.turn}`, text: "PLAYER 1 がスキルを選択" });
     render();
     return;
@@ -300,10 +221,12 @@ function resolveTurn(playerSkillId, forcedCpuSkillId = null) {
   const cpuSkillId = forcedCpuSkillId ?? chooseCpuSkill();
   const playerSkill = getSkill(playerSkillId);
   const cpuSkill = getSkill(cpuSkillId);
+  if (!playerSkill || !cpuSkill) return;
+
   state.resolving = true;
   startBgmLoop();
   triggerSkillAnimations(playerSkill, cpuSkill);
-  els.revealText.textContent = `あなた ${playerSkill.name} / CPU ${cpuSkill.name}`;
+  els.revealText.textContent = `${state.playerCharacter.name} ${playerSkill.name} / ${opponentLabel()} ${cpuSkill.name}`;
   els.resultReason.textContent = "スキル発動中...";
 
   window.setTimeout(() => {
@@ -312,12 +235,8 @@ function resolveTurn(playerSkillId, forcedCpuSkillId = null) {
 
     const summary = executeResolution(playerSkill, cpuSkill);
     state.lastReveal = { playerSkill, cpuSkill };
-    state.logEntries.unshift({
-      label: `T${state.turn}`,
-      text: `${playerSkill.name} / ${cpuSkill.name} | ${summary.short}`,
-    });
+    state.logEntries.unshift({ label: `T${state.turn}`, text: `${playerSkill.name} / ${cpuSkill.name} | ${summary.short}` });
 
-    triggerRevealPulse();
     triggerOutcomeAnimations(summary.notes);
     playTurnSounds(summary.notes, playerSkill, cpuSkill);
     state.resolving = false;
@@ -329,6 +248,7 @@ function resolveTurn(playerSkillId, forcedCpuSkillId = null) {
       finishBattle(summary.reason);
     } else {
       state.turn += 1;
+      state.resultReason = state.mode === "pvp" ? "PLAYER 1 がこのターンのスキルを選んでください。" : "次のカードを選んでください。";
       render();
     }
   }, 640);
@@ -342,9 +262,7 @@ function chooseCpuSkill() {
   if (state.cpuCharacter && state.cpuCharacter.attack >= 80) priorities.push("heavy", "attack");
   if (state.cpuCharacter && state.cpuCharacter.defense >= 80) priorities.push("guard", "counter");
   if (playerOptions.includes("charge")) priorities.push("guard", "counter");
-  if (playerOptions.some((id) => ["attack", "heavy"].includes(id))) {
-    priorities.push("counter", "guard", "heavy", "attack");
-  }
+  if (playerOptions.some((id) => ["attack", "heavy"].includes(id))) priorities.push("counter", "guard");
   priorities.push("attack", "guard", "heavy", "counter", "charge");
 
   const preferred = priorities.find((id) => options.includes(id));
@@ -412,9 +330,8 @@ function executeResolution(playerSkill, cpuSkill) {
   } else if (!playerAttackSealed) {
     const damage = outgoingDamage(playerCtx, state.playerCharacter, state.cpuCharacter);
     if (damage > 0) {
-      if (cpuGuard) {
-        notes.push("敵防御");
-      } else {
+      if (cpuGuard) notes.push("敵防御");
+      else {
         state.cpuHp -= damage;
         notes.push(`敵-${damage}`);
       }
@@ -428,9 +345,8 @@ function executeResolution(playerSkill, cpuSkill) {
   } else if (!cpuAttackSealed) {
     const damage = outgoingDamage(cpuCtx, state.cpuCharacter, state.playerCharacter);
     if (damage > 0) {
-      if (playerGuard) {
-        notes.push("自防御");
-      } else {
+      if (playerGuard) notes.push("自防御");
+      else {
         state.playerHp -= damage;
         notes.push(`自-${damage}`);
       }
@@ -483,15 +399,13 @@ function spendCharge(ctx, owner) {
 
 function finishBattle(reason) {
   state.phase = "result";
-
   if (state.playerHp > state.cpuHp) state.winner = "win";
   else if (state.playerHp < state.cpuHp) state.winner = "lose";
   else state.winner = "draw";
 
-  const labelMap = { win: "勝利", lose: "敗北", draw: "引分" };
+  const labelMap = { win: "勝利", lose: "敗北", draw: "引き分け" };
   state.logEntries.unshift({ label: "結果", text: labelMap[state.winner] });
-  state.resultReason =
-    state.winner === "win" ? `勝因: ${reason}` : state.winner === "lose" ? `敗因: ${reason}` : `決め手: ${reason}`;
+  state.resultReason = state.winner === "win" ? `勝因: ${reason}` : state.winner === "lose" ? `敗因: ${reason}` : `決着: ${reason}`;
   playSound(state.winner === "win" ? "win" : state.winner === "lose" ? "lose" : "draw");
   render();
 }
@@ -499,7 +413,7 @@ function finishBattle(reason) {
 function summarizeReason(notes, playerSkill, cpuSkill) {
   if (notes.some((note) => note.includes("反動"))) return "強攻撃を読んで反動を取った。";
   if (notes.some((note) => note.includes("防御"))) return "防御で流れを止めた。";
-  if (notes.some((note) => note.includes("溜め"))) return "溜めが次の圧を作った。";
+  if (notes.some((note) => note.includes("溜め"))) return "気合の溜めが次の圧を作った。";
   if (playerSkill.id === "counter" || cpuSkill.id === "counter") return "カウンターの読み合いが刺さった。";
   const enemyHits = notes.filter((note) => note.startsWith("敵-")).length;
   const selfHits = notes.filter((note) => note.startsWith("自-")).length;
@@ -507,7 +421,6 @@ function summarizeReason(notes, playerSkill, cpuSkill) {
   if (selfHits > enemyHits) return "受けの択で差がついた。";
   return "お互いの択がかみ合った。";
 }
-
 function ensureAudioContext() {
   if (!state.soundEnabled) return null;
   if (!audio.ctx) {
@@ -515,9 +428,7 @@ function ensureAudioContext() {
     if (!AudioContextClass) return null;
     audio.ctx = new AudioContextClass();
   }
-  if (audio.ctx.state === "suspended") {
-    audio.ctx.resume();
-  }
+  if (audio.ctx.state === "suspended") audio.ctx.resume();
   return audio.ctx;
 }
 
@@ -542,13 +453,8 @@ function startBgmLoop() {
     audio.bgmEl.volume = 0.32;
     if (!wasPlaying) return;
   }
-
   const playPromise = audio.bgmEl.play();
-  if (playPromise && typeof playPromise.catch === "function") {
-    playPromise.catch(() => {
-      // Playback can fail until the user has interacted with the page.
-    });
-  }
+  if (playPromise && typeof playPromise.catch === "function") playPromise.catch(() => {});
 }
 
 function loadSoundPreference() {
@@ -581,33 +487,19 @@ function loadModePreference() {
 function saveSoundPreference() {
   try {
     window.localStorage.setItem("deckBattleSoundEnabled", String(state.soundEnabled));
-  } catch {
-    // Ignore storage failures.
-  }
+  } catch {}
 }
 
 function saveBgmPreference() {
   try {
     window.localStorage.setItem("deckBattleBgmTrack", state.bgmTrack);
-  } catch {
-    // Ignore storage failures.
-  }
+  } catch {}
 }
 
 function saveModePreference() {
   try {
     window.localStorage.setItem("deckBattleMode", state.mode);
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
-function triggerRevealPulse() {
-  if (!els.revealPanel) return;
-  els.revealPanel.classList.remove("is-revealed");
-  window.requestAnimationFrame(() => {
-    els.revealPanel.classList.add("is-revealed");
-  });
+  } catch {}
 }
 
 function pulseElement(element, ...classNames) {
@@ -618,24 +510,35 @@ function pulseElement(element, ...classNames) {
 }
 
 function skillAnimationClass(skillId) {
-  const classMap = {
-    attack: "action-attack",
-    heavy: "action-heavy",
-    guard: "action-guard",
-    charge: "action-charge",
-    counter: "action-counter",
-  };
+  const classMap = { attack: "action-attack", heavy: "action-heavy", guard: "action-guard", charge: "action-charge", counter: "action-counter" };
   return classMap[skillId] ?? "is-acting";
+}
+
+function showEffect(target, characterId, skillId) {
+  if (!target) return;
+  const text = EFFECT_LABELS[characterId]?.[skillId] ?? "スキル";
+  target.textContent = text;
+  target.className = `fighter-effect ${skillId} show`;
+}
+
+function clearEffect(target) {
+  if (!target) return;
+  target.textContent = "";
+  target.className = "fighter-effect";
 }
 
 function triggerSkillAnimations(playerSkill, cpuSkill) {
   pulseElement(els.playerCard, "is-acting", skillAnimationClass(playerSkill.id));
   pulseElement(els.cpuCard, "is-acting", skillAnimationClass(cpuSkill.id));
+  pulseElement(els.playerFighter, "is-acting", skillAnimationClass(playerSkill.id));
+  pulseElement(els.cpuFighter, "is-acting", skillAnimationClass(cpuSkill.id));
   pulseElement(els.revealPanel, "is-casting");
-
-  if (isAttackSkill(playerSkill) || isAttackSkill(cpuSkill)) {
-    pulseElement(els.body, "screen-flash");
-  }
+  showEffect(els.playerEffect, state.playerCharacter?.id, playerSkill.id);
+  showEffect(els.cpuEffect, state.cpuCharacter?.id, cpuSkill.id);
+  window.setTimeout(() => {
+    clearEffect(els.playerEffect);
+    clearEffect(els.cpuEffect);
+  }, 700);
 }
 
 function triggerOutcomeAnimations(notes) {
@@ -644,10 +547,22 @@ function triggerOutcomeAnimations(notes) {
   const playerGuarded = notes.includes("自防御");
   const cpuGuarded = notes.includes("敵防御");
 
-  if (playerDamaged) pulseElement(els.playerCard, "is-hit");
-  if (cpuDamaged) pulseElement(els.cpuCard, "is-hit");
-  if (playerGuarded) pulseElement(els.playerCard, "is-guarding");
-  if (cpuGuarded) pulseElement(els.cpuCard, "is-guarding");
+  if (playerDamaged) {
+    pulseElement(els.playerCard, "is-hit");
+    pulseElement(els.playerFighter, "is-hit");
+  }
+  if (cpuDamaged) {
+    pulseElement(els.cpuCard, "is-hit");
+    pulseElement(els.cpuFighter, "is-hit");
+  }
+  if (playerGuarded) {
+    pulseElement(els.playerCard, "is-guarding");
+    pulseElement(els.playerFighter, "is-guarding");
+  }
+  if (cpuGuarded) {
+    pulseElement(els.cpuCard, "is-guarding");
+    pulseElement(els.cpuFighter, "is-guarding");
+  }
 }
 
 function scheduleTone(ctx, frequency, start, duration, gainValue, type = "triangle") {
@@ -674,101 +589,62 @@ function playSound(kind) {
     scheduleTone(ctx, 660, now + 0.05, 0.1, 0.02, "triangle");
     return;
   }
-
   if (kind === "charge") {
     scheduleTone(ctx, 320, now, 0.12, 0.025, "sine");
     scheduleTone(ctx, 480, now + 0.08, 0.16, 0.03, "sine");
     return;
   }
-
-  if (kind === "hit") {
-    scheduleTone(ctx, 180, now, 0.08, 0.04, "sawtooth");
-    scheduleTone(ctx, 120, now + 0.03, 0.12, 0.03, "square");
-    return;
-  }
-
   if (kind === "impact") {
     scheduleTone(ctx, 210, now, 0.04, 0.05, "square");
     scheduleTone(ctx, 132, now + 0.015, 0.08, 0.045, "sawtooth");
     scheduleTone(ctx, 86, now + 0.03, 0.12, 0.035, "triangle");
     return;
   }
-
   if (kind === "smash") {
     scheduleTone(ctx, 160, now, 0.03, 0.06, "square");
     scheduleTone(ctx, 98, now + 0.012, 0.08, 0.05, "sawtooth");
     scheduleTone(ctx, 64, now + 0.022, 0.12, 0.04, "triangle");
     return;
   }
-
-  if (kind === "heavy") {
-    scheduleTone(ctx, 120, now, 0.1, 0.04, "sawtooth");
-    scheduleTone(ctx, 90, now + 0.04, 0.16, 0.035, "square");
-    return;
-  }
-
-  if (kind === "counter") {
-    scheduleTone(ctx, 740, now, 0.05, 0.03, "square");
-    scheduleTone(ctx, 440, now + 0.05, 0.08, 0.03, "square");
-    return;
-  }
-
   if (kind === "block") {
     scheduleTone(ctx, 240, now, 0.07, 0.025, "triangle");
     scheduleTone(ctx, 190, now + 0.04, 0.09, 0.02, "triangle");
     return;
   }
-
+  if (kind === "counter") {
+    scheduleTone(ctx, 740, now, 0.05, 0.03, "square");
+    scheduleTone(ctx, 440, now + 0.05, 0.08, 0.03, "square");
+    return;
+  }
   if (kind === "win") {
     scheduleTone(ctx, 523, now, 0.12, 0.03, "triangle");
     scheduleTone(ctx, 659, now + 0.11, 0.12, 0.03, "triangle");
     scheduleTone(ctx, 784, now + 0.22, 0.2, 0.04, "triangle");
     return;
   }
-
   if (kind === "lose") {
     scheduleTone(ctx, 392, now, 0.14, 0.03, "sawtooth");
     scheduleTone(ctx, 294, now + 0.12, 0.14, 0.03, "sawtooth");
     scheduleTone(ctx, 196, now + 0.24, 0.22, 0.035, "sawtooth");
     return;
   }
-
   if (kind === "draw") {
     scheduleTone(ctx, 330, now, 0.12, 0.025, "triangle");
-    scheduleTone(ctx, 330, now + 0.14, 0.12, 0.02, "triangle");
+    scheduleTone(ctx, 392, now + 0.09, 0.12, 0.025, "triangle");
   }
 }
 
 function playTurnSounds(notes, playerSkill, cpuSkill) {
-  const attackCommitted = isAttackSkill(playerSkill) || isAttackSkill(cpuSkill);
-  const heavyCommitted = playerSkill.id === "heavy" || cpuSkill.id === "heavy";
-
-  if (notes.some((note) => note.includes("防御"))) {
-    playSound("block");
-  }
-  if (notes.some((note) => note.includes("溜め"))) {
-    playSound("charge");
-  }
-  if (notes.some((note) => note.includes("反動"))) {
-    playSound("counter");
-    playSound("heavy");
+  if (notes.some((note) => note.includes("防御"))) playSound("block");
+  if (playerSkill.id === "charge" || cpuSkill.id === "charge") playSound("charge");
+  if (playerSkill.id === "counter" || cpuSkill.id === "counter") playSound("counter");
+  if (playerSkill.id === "heavy" || cpuSkill.id === "heavy") {
+    playSound("impact");
     playSound("smash");
     return;
   }
-  if (attackCommitted) {
-    playSound("impact");
-    playSound("smash");
-  }
-  if (notes.some((note) => note.includes("-30"))) {
-    playSound("counter");
-  }
-  if (heavyCommitted || notes.some((note) => note.includes("-5") || note.includes("-6") || note.includes("-7"))) {
-    playSound("heavy");
-  } else if (notes.some((note) => note.includes("-"))) {
-    playSound("hit");
-  }
+  if (isAttackSkill(playerSkill) || isAttackSkill(cpuSkill)) playSound("impact");
 }
-
 function render() {
   renderHeader();
   renderCharacterPool();
@@ -781,54 +657,47 @@ function render() {
 function renderHeader() {
   const playerMax = state.playerCharacter ? state.playerCharacter.hp : MAX_HP;
   const cpuMax = state.cpuCharacter ? state.cpuCharacter.hp : MAX_HP;
-  els.playerName.textContent = state.playerCharacter ? state.playerCharacter.name : "PLAYER";
-  els.cpuName.textContent = state.cpuCharacter ? state.cpuCharacter.name : state.mode === "pvp" ? "PLAYER 2" : "CPU";
+  els.playerName.textContent = state.playerCharacter ? state.playerCharacter.name : PLAYER_LABEL;
+  els.cpuName.textContent = state.cpuCharacter ? state.cpuCharacter.name : state.mode === "pvp" ? PLAYER2_LABEL : CPU_LABEL;
   els.playerHp.textContent = `${state.playerHp} / ${playerMax}`;
   els.cpuHp.textContent = `${state.cpuHp} / ${cpuMax}`;
   els.playerHpFill.style.width = `${playerMax ? (state.playerHp / playerMax) * 100 : 0}%`;
   els.cpuHpFill.style.width = `${cpuMax ? (state.cpuHp / cpuMax) * 100 : 0}%`;
-  els.playerCharge.textContent = `溜め +${state.playerCharge}`;
-  els.cpuCharge.textContent = `溜め +${state.cpuCharge}`;
-  els.cpuStyle.textContent = state.cpuCharacter ? `${state.cpuCharacter.style}${state.mode === "pvp" ? "" : "AI"}` : state.mode === "pvp" ? "PLAYER 2" : "標準AI";
-  els.playerAvatar.dataset.character = state.playerCharacter?.id ?? "neutral";
-  els.cpuAvatar.dataset.character = state.cpuCharacter?.id ?? "neutral";
-  setAvatarImage(els.playerAvatarImg, state.playerCharacter);
-  setAvatarImage(els.cpuAvatarImg, state.cpuCharacter);
+  els.playerCharge.textContent = `ため +${state.playerCharge}`;
+  els.cpuCharge.textContent = `ため +${state.cpuCharge}`;
+  els.cpuStyle.textContent = state.cpuCharacter ? `${state.cpuCharacter.style}${state.mode === "pvp" ? "" : "AI"}` : state.mode === "pvp" ? PLAYER2_LABEL : "標準AI";
+  setAvatarImage(els.playerAvatar, els.playerAvatarImg, state.playerCharacter, false);
+  setAvatarImage(els.cpuAvatar, els.cpuAvatarImg, state.cpuCharacter, true);
+  setStageImage(els.playerFighter, els.playerStageImg, state.playerCharacter);
+  setStageImage(els.cpuFighter, els.cpuStageImg, state.cpuCharacter);
 
   if (state.phase === "character") {
     els.phaseTitle.textContent = "キャラ選択";
     els.turnLabel.textContent = "準備中";
     els.leftTitle.textContent = "キャラクター選択";
     els.selectionCounter.textContent = `${CHARACTERS.length}体から選択`;
-    els.statusText.textContent =
-      state.mode === "pvp" && state.currentChooser === "cpu"
-        ? "PLAYER 2 のキャラクターを選ぶと対戦開始です。"
-        : "キャラクターを選ぶと、攻撃力・防御力・HPが対戦に反映されます。";
-    els.resultReason.textContent = state.resultReason;
+    els.statusText.textContent = state.mode === "pvp" && state.currentChooser === "cpu" ? "PLAYER 2 のキャラクターを選ぶと対戦開始です。" : "キャラクターを選ぶと、攻撃力・防御力・HPが対戦に反映されます。";
+    els.setupPanel.hidden = false;
     setBadge("READY");
   } else if (state.phase === "battle") {
     els.phaseTitle.textContent = `第${state.turn}ターン`;
     els.turnLabel.textContent = `${state.turn} / ${TOTAL_TURNS}`;
-    els.leftTitle.textContent = "スキル状況";
+    els.leftTitle.textContent = "スキル選択";
     els.selectionCounter.textContent = `${remainingPlayerCards().length} / ${TOTAL_TURNS} 使用可能`;
-    els.statusText.textContent =
-      state.mode === "pvp"
-        ? state.currentChooser === "player"
-          ? `PLAYER 1 の番です。残り${remainingPlayerCards().length}枚から1枚選んでください。`
-          : `PLAYER 2 の番です。残り${remainingOpponentCards().length}枚から1枚選んでください。`
-        : `残り${remainingPlayerCards().length}枚。 このターンに使う1枚を選んでください。`;
-    els.resultReason.textContent = state.resultReason;
+    els.statusText.textContent = state.mode === "pvp" ? (state.currentChooser === "player" ? `PLAYER 1 の番です。残り${remainingPlayerCards().length}枚から1枚選んでください。` : `PLAYER 2 の番です。残り${remainingOpponentCards().length}枚から1枚選んでください。`) : `残り${remainingPlayerCards().length}枚。 このターンに使う1枚を選んでください。`;
+    els.setupPanel.hidden = true;
     setBadge("BATTLE");
   } else {
     els.phaseTitle.textContent = "結果";
     els.turnLabel.textContent = "END";
-    els.leftTitle.textContent = "スキル状況";
+    els.leftTitle.textContent = "スキル結果";
     els.selectionCounter.textContent = `${remainingPlayerCards().length} / ${TOTAL_TURNS} 使用可能`;
     els.statusText.textContent = resultMessage();
-    els.resultReason.textContent = state.resultReason;
+    els.setupPanel.hidden = true;
     setBadge(state.winner === "win" ? "WIN" : state.winner === "lose" ? "LOSE" : "DRAW", state.winner);
   }
 
+  els.resultReason.textContent = state.resultReason;
   els.soundButton.textContent = state.soundEnabled ? "音 ON" : "音 OFF";
   els.soundButton.setAttribute("aria-pressed", String(state.soundEnabled));
   els.modeSelect.value = state.mode;
@@ -837,60 +706,42 @@ function renderHeader() {
 
 function renderCharacterPool() {
   els.characterPool.innerHTML = "";
-  els.characterPool.hidden = state.phase !== "character";
-  els.skillPool.hidden = state.phase === "character";
   if (state.phase !== "character") return;
 
   CHARACTERS.forEach((character) => {
     if (state.mode === "pvp" && state.currentChooser === "cpu" && state.playerCharacter?.id === character.id) return;
     const card = els.characterTemplate.content.firstElementChild.cloneNode(true);
-    card.querySelector(".character-avatar").dataset.character = character.id;
+    const avatar = card.querySelector(".character-avatar");
     const photo = card.querySelector(".character-photo");
+    avatar.dataset.character = character.id;
     photo.src = character.avatar;
     photo.alt = `${character.name}のイラスト`;
     card.querySelector(".character-name").textContent = character.name;
     card.querySelector(".character-emoji").textContent = character.emoji;
     card.querySelector(".character-style").textContent = character.style;
-    card.querySelector(".character-stats").innerHTML = [
-      `攻 ${character.attack}`,
-      `防 ${character.defense}`,
-      `HP ${character.hp}`,
-    ]
-      .map((text) => `<span>${text}</span>`)
-      .join("");
+    card.querySelector(".character-stats").innerHTML = [`攻 ${character.attack}`, `防 ${character.defense}`, `HP ${character.hp}`].map((text) => `<span>${text}</span>`).join("");
     card.addEventListener("click", () => chooseCharacter(character.id));
     els.characterPool.appendChild(card);
   });
 }
 
-function setBadge(label, tone = "") {
-  els.resultBadge.textContent = label;
-  els.resultBadge.className = `result-badge${tone ? ` ${tone}` : ""}`;
-}
-
-function resultMessage() {
-  if (state.winner === "win") return "読み勝ちです。もう一度挑めます。";
-  if (state.winner === "lose") return "CPUに読まれました。順番を変えて再戦。";
-  return "引き分けです。次の一手を変えてみましょう。";
-}
-
 function renderSkillPool() {
   els.skillPool.innerHTML = "";
+  els.skillPool.hidden = state.phase === "character";
   if (state.phase === "character") return;
 
   SKILLS.forEach((skill) => {
-    const card = buildCard(skill);
+    const card = buildSkillCard(skill);
     const activeHand = state.currentChooser === "player" ? state.playerHand : state.cpuHand;
     const activeCharge = state.currentChooser === "player" ? state.playerCharge : state.cpuCharge;
-    const playerCard = activeHand.find((entry) => entry.id === skill.id);
-    const available = Boolean(playerCard) && !playerCard.used && state.phase === "battle";
+    const entry = activeHand.find((handCard) => handCard.id === skill.id);
+    const available = Boolean(entry) && !entry.used && state.phase === "battle";
     const boosted = available && activeCharge > 0 && ["attack", "heavy"].includes(skill.id);
-
     card.classList.toggle("selected", available);
-    card.classList.toggle("used", playerCard?.used);
+    card.classList.toggle("used", entry?.used);
     card.classList.toggle("boosted", boosted);
     card.disabled = !available || state.resolving;
-    card.querySelector(".skill-state").textContent = playerCard?.used ? "使用済み" : boosted ? "強化中" : "選択可";
+    card.querySelector(".skill-state").textContent = entry?.used ? "使用済み" : boosted ? "強化中" : "選択可";
     card.addEventListener("click", () => toggleSkill(skill.id));
     els.skillPool.appendChild(card);
   });
@@ -899,12 +750,11 @@ function renderSkillPool() {
 function renderCpuHand() {
   els.cpuHand.innerHTML = "";
   if (state.phase === "character") return;
-
   state.cpuHand.forEach((card) => {
     const skill = getSkill(card.id);
-    const revealed = state.phase === "result" || card.used;
+    const revealed = state.phase === "result" || card.used || (state.mode === "pvp" && state.currentChooser === "cpu");
     const item = document.createElement("div");
-    item.className = `hand-card compact-hand ${revealed ? "revealed" : "hidden"}`;
+    item.className = `hand-card ${revealed ? "revealed" : "hidden"}`;
     item.innerHTML = `<strong>${revealed ? skill.name : "???"}</strong><small>${revealed ? (card.used ? "使用済み" : "未使用") : "未公開"}</small>`;
     els.cpuHand.appendChild(item);
   });
@@ -912,40 +762,39 @@ function renderCpuHand() {
 
 function renderReveal() {
   if (state.phase === "character") {
-    els.revealText.textContent =
-      state.mode === "pvp" && state.currentChooser === "cpu" ? "PLAYER 2 のキャラクターを選んでください" : "キャラクターを選んでください";
+    els.revealText.textContent = state.mode === "pvp" && state.currentChooser === "cpu" ? "PLAYER 2 のキャラクターを選んでください" : "キャラクターを選んでください";
     return;
   }
   if (!state.lastReveal) {
-    els.revealText.textContent =
-      state.mode === "pvp"
-        ? state.currentChooser === "player"
-          ? "PLAYER 1 のカードを選んでください"
-          : "PLAYER 2 のカードを選んでください"
-        : "1ターン目のカードを選んでください";
+    els.revealText.textContent = state.mode === "pvp" ? (state.currentChooser === "player" ? "PLAYER 1 のカードを選んでください" : "PLAYER 2 のカードを選んでください") : "このターンのカードを選んでください";
     return;
   }
-  els.revealText.textContent =
-    state.mode === "pvp"
-      ? `PLAYER 1 ${state.lastReveal.playerSkill.name} / PLAYER 2 ${state.lastReveal.cpuSkill.name}`
-      : `あなた ${state.lastReveal.playerSkill.name} / CPU ${state.lastReveal.cpuSkill.name}`;
-  els.revealPanel.classList.remove("is-revealed");
-  void els.revealPanel.offsetWidth;
-  els.revealPanel.classList.add("is-revealed");
+  els.revealText.textContent = state.mode === "pvp" ? `PLAYER 1 ${state.lastReveal.playerSkill.name} / PLAYER 2 ${state.lastReveal.cpuSkill.name}` : `${state.playerCharacter.name} ${state.lastReveal.playerSkill.name} / CPU ${state.lastReveal.cpuSkill.name}`;
 }
 
 function renderLog() {
   els.battleLog.innerHTML = "";
-  state.logEntries.slice(0, 4).forEach((entry) => {
+  state.logEntries.slice(0, 3).forEach((entry) => {
     const item = document.createElement("article");
-    item.className = "log-item compact-item";
+    item.className = "log-item";
     item.innerHTML = `<strong>${entry.label}</strong><span>${entry.text}</span>`;
     els.battleLog.appendChild(item);
   });
 }
 
-function buildCard(skill) {
-  const fragment = els.template.content.firstElementChild.cloneNode(true);
+function resultMessage() {
+  if (state.winner === "win") return "読み勝ちです。もう一度挑めます。";
+  if (state.winner === "lose") return "相手に読まれました。順番を変えて再戦。";
+  return "引き分けです。次の一手を変えてみましょう。";
+}
+
+function setBadge(label, tone = "") {
+  els.resultBadge.textContent = label;
+  els.resultBadge.className = `result-badge${tone ? ` ${tone}` : ""}`;
+}
+
+function buildSkillCard(skill) {
+  const fragment = els.skillTemplate.content.firstElementChild.cloneNode(true);
   fragment.querySelector(".skill-name").textContent = skill.name;
   fragment.querySelector(".skill-tag").textContent = skill.tag;
   fragment.querySelector(".skill-description").textContent = skill.description;
@@ -953,8 +802,9 @@ function buildCard(skill) {
   return fragment;
 }
 
-function setAvatarImage(img, character) {
-  if (!img) return;
+function setAvatarImage(wrapper, img, character, flip) {
+  wrapper.dataset.character = character?.id ?? "neutral";
+  wrapper.classList.toggle("cpu-avatar", flip);
   if (!character) {
     img.removeAttribute("src");
     img.alt = "";
@@ -962,6 +812,21 @@ function setAvatarImage(img, character) {
   }
   img.src = character.avatar;
   img.alt = `${character.name}のイラスト`;
+}
+
+function setStageImage(wrapper, img, character) {
+  wrapper.dataset.character = character?.id ?? "neutral";
+  if (!character) {
+    img.removeAttribute("src");
+    img.alt = "";
+    return;
+  }
+  img.src = character.avatar;
+  img.alt = `${character.name}の立ち絵`;
+}
+
+function opponentLabel() {
+  return state.mode === "pvp" ? PLAYER2_LABEL : CPU_LABEL;
 }
 
 els.resetButton.addEventListener("click", resetGame);
