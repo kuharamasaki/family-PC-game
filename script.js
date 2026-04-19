@@ -790,6 +790,8 @@ function renderHeader() {
   els.playerCharge.textContent = `溜め +${state.playerCharge}`;
   els.cpuCharge.textContent = `溜め +${state.cpuCharge}`;
   els.cpuStyle.textContent = state.cpuCharacter ? `${state.cpuCharacter.style}${state.mode === "pvp" ? "" : "AI"}` : state.mode === "pvp" ? "PLAYER 2" : "標準AI";
+  els.playerCard.dataset.character = state.playerCharacter?.id ?? "neutral";
+  els.cpuCard.dataset.character = state.cpuCharacter?.id ?? "neutral";
   els.playerAvatar.dataset.character = state.playerCharacter?.id ?? "neutral";
   els.cpuAvatar.dataset.character = state.cpuCharacter?.id ?? "neutral";
   setAvatarImage(els.playerAvatarImg, state.playerCharacter);
