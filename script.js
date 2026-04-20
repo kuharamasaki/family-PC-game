@@ -77,6 +77,13 @@ const SKILLS = [
     power: "+20",
   },
   {
+    id: "heal",
+    name: "回復",
+    tag: "支援",
+    description: "HPを25回復する。",
+    power: "HEAL 25",
+  },
+  {
     id: "heavy",
     name: "強攻撃",
     tag: "大技",
@@ -339,13 +346,16 @@ function chooseCpuSkill() {
   const playerOptions = remainingPlayerCards();
   const priorities = [];
 
+  if (options.includes("heal") && state.cpuHp <= Math.max(35, Math.round(state.cpuCharacter.hp * 0.45))) {
+    priorities.push("heal", "guard");
+  }
   if (state.cpuCharacter && state.cpuCharacter.attack >= 80) priorities.push("heavy", "attack");
   if (state.cpuCharacter && state.cpuCharacter.defense >= 80) priorities.push("guard", "counter");
   if (playerOptions.includes("charge")) priorities.push("guard", "counter");
   if (playerOptions.some((id) => ["attack", "heavy"].includes(id))) {
     priorities.push("counter", "guard", "heavy", "attack");
   }
-  priorities.push("attack", "guard", "heavy", "counter", "charge");
+  priorities.push("attack", "guard", "heavy", "counter", "charge", "heal");
 
   const preferred = priorities.find((id) => options.includes(id));
   if (preferred && Math.random() < 0.65) return preferred;
@@ -462,6 +472,15 @@ function executeResolutionV2(playerSkill, cpuSkill) {
   if (cpuSkill.id === "charge") {
     state.cpuCharge += chargeBonus(state.cpuCharacter);
     notes.push("謨ｵ+貅懊ａ");
+  }
+
+  if (playerSkill.id === "heal") {
+    state.playerHp = Math.min(state.playerCharacter.hp, state.playerHp + 25);
+    notes.push("髢ｾ・ｪ+回復");
+  }
+  if (cpuSkill.id === "heal") {
+    state.cpuHp = Math.min(state.cpuCharacter.hp, state.cpuHp + 25);
+    notes.push("隰ｨ・ｵ+回復");
   }
 
   const playerGuard = playerSkill.id === "guard";
@@ -756,6 +775,13 @@ function playSound(kind) {
     return;
   }
 
+  if (kind === "heal") {
+    scheduleTone(ctx, 460, now, 0.1, 0.025, "triangle");
+    scheduleTone(ctx, 620, now + 0.08, 0.16, 0.02, "triangle");
+    scheduleTone(ctx, 780, now + 0.18, 0.18, 0.018, "sine");
+    return;
+  }
+
   if (kind === "hit") {
     scheduleTone(ctx, 180, now, 0.08, 0.04, "sawtooth");
     scheduleTone(ctx, 120, now + 0.03, 0.12, 0.03, "square");
@@ -815,6 +841,9 @@ function playSound(kind) {
 }
 
 function playTurnSounds(notes, playerSkill, cpuSkill) {
+  if (notes.some((note) => note.includes("回復"))) {
+    playSound("heal");
+  }
   const attackCommitted = isAttackSkill(playerSkill) || isAttackSkill(cpuSkill);
   const heavyCommitted = playerSkill.id === "heavy" || cpuSkill.id === "heavy";
 

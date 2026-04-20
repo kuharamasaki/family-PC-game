@@ -178,9 +178,17 @@ p {
   margin-bottom: 8px;
 }
 
+.hp-card.cpu .hp-card-top {
+  flex-direction: row-reverse;
+}
+
 .hp-info {
   flex: 1;
   min-width: 0;
+}
+
+.hp-card.cpu .hp-info {
+  text-align: right;
 }
 
 .hp-head {
@@ -366,18 +374,18 @@ p {
     0 0 24px rgba(var(--beam-rgb, 173, 236, 255), 0.92),
     0 0 48px rgba(var(--beam-rgb, 173, 236, 255), 0.72),
     0 0 76px rgba(var(--beam-rgb, 173, 236, 255), 0.42);
-  animation: beamShot 520ms ease-out;
+  animation: beamShot 3s ease-out forwards;
   pointer-events: none;
   z-index: 4;
 }
 
 .hp-card.player.action-heavy::after {
-  left: calc(100% - 18px);
+  left: calc(100% - 12px);
   transform-origin: left center;
 }
 
 .hp-card.cpu.action-heavy::after {
-  right: calc(100% - 18px);
+  right: calc(100% - 12px);
   transform-origin: right center;
 }
 
@@ -510,10 +518,12 @@ p {
 
 .hp-card.player .status-photo {
   transform: scaleX(-1);
+  object-position: center 35%;
 }
 
 .hp-card.cpu .status-photo {
   transform: none;
+  object-position: center 35%;
 }
 
 .character-avatar::before,
@@ -762,10 +772,15 @@ p {
     transform: scaleX(0.16);
     filter: brightness(1);
   }
-  20% {
+  12% {
     opacity: 1;
     transform: scaleX(1.08);
     filter: brightness(1.46);
+  }
+  72% {
+    opacity: 1;
+    transform: scaleX(1.12);
+    filter: brightness(1.4);
   }
   100% {
     opacity: 0;
