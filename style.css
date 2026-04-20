@@ -336,8 +336,12 @@ p {
   will-change: transform, filter;
 }
 
-.hp-card.action-attack .status-avatar {
-  animation: avatarAttack 520ms ease;
+.hp-card.player.action-attack .status-avatar {
+  animation: avatarAttackPlayer 520ms ease;
+}
+
+.hp-card.cpu.action-attack .status-avatar {
+  animation: avatarAttackCpu 520ms ease;
 }
 
 .hp-card.action-heavy .status-avatar {
@@ -347,9 +351,9 @@ p {
 .hp-card.action-heavy::after {
   content: "";
   position: absolute;
-  top: 28px;
-  height: 28px;
-  width: min(58vw, 520px);
+  top: 22px;
+  height: 40px;
+  width: min(66vw, 620px);
   border-radius: 999px;
   background:
     linear-gradient(90deg,
@@ -368,12 +372,12 @@ p {
 }
 
 .hp-card.player.action-heavy::after {
-  left: calc(100% - 12px);
+  left: calc(100% - 18px);
   transform-origin: left center;
 }
 
 .hp-card.cpu.action-heavy::after {
-  right: calc(100% - 12px);
+  right: calc(100% - 18px);
   transform-origin: right center;
 }
 
@@ -395,9 +399,9 @@ p {
 .hp-card.action-guard::before {
   content: "";
   position: absolute;
-  top: 6px;
-  width: 98px;
-  height: 124px;
+  top: -4px;
+  width: 104px;
+  height: 132px;
   border-radius: 24px 24px 36px 36px;
   clip-path: polygon(50% 0%, 90% 16%, 90% 60%, 50% 100%, 10% 60%, 10% 16%);
   background:
@@ -415,9 +419,9 @@ p {
 .hp-card.action-guard::after {
   content: "";
   position: absolute;
-  top: 20px;
-  width: 72px;
-  height: 92px;
+  top: 12px;
+  width: 78px;
+  height: 100px;
   clip-path: polygon(50% 4%, 82% 18%, 82% 56%, 50% 92%, 18% 56%, 18% 18%);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(123, 220, 255, 0.04)),
@@ -430,20 +434,24 @@ p {
 
 .hp-card.player.action-guard::before,
 .hp-card.player.action-guard::after {
-  left: calc(100% - 18px);
+  left: 34px;
 }
 
 .hp-card.cpu.action-guard::before,
 .hp-card.cpu.action-guard::after {
-  right: calc(100% - 18px);
+  left: -42px;
 }
 
 .hp-card.action-charge .status-avatar {
   animation: avatarCharge 620ms ease;
 }
 
-.hp-card.action-counter .status-avatar {
-  animation: avatarCounter 520ms ease;
+.hp-card.player.action-counter .status-avatar {
+  animation: avatarCounterPlayer 520ms ease;
+}
+
+.hp-card.cpu.action-counter .status-avatar {
+  animation: avatarCounterCpu 520ms ease;
 }
 
 .hp-card.is-hit {
@@ -500,6 +508,14 @@ p {
   object-position: center 35%;
 }
 
+.hp-card.player .status-photo {
+  transform: scaleX(-1);
+}
+
+.hp-card.cpu .status-photo {
+  transform: none;
+}
+
 .character-avatar::before,
 .character-avatar::after,
 .status-avatar::before,
@@ -508,7 +524,7 @@ p {
 }
 
 .cpu-avatar {
-  transform: scaleX(-1);
+  transform: none;
 }
 
 .character-header {
@@ -721,9 +737,15 @@ p {
   }
 }
 
-@keyframes avatarAttack {
+@keyframes avatarAttackPlayer {
   0% { transform: translateX(0) scale(1); }
-  35% { transform: translateX(10px) scale(1.06) rotate(-4deg); filter: brightness(1.18); }
+  35% { transform: translateX(12px) scale(1.06) rotate(-4deg); filter: brightness(1.18); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+@keyframes avatarAttackCpu {
+  0% { transform: translateX(0) scale(1); }
+  35% { transform: translateX(-12px) scale(1.06) rotate(4deg); filter: brightness(1.18); }
   100% { transform: translateX(0) scale(1); }
 }
 
@@ -742,12 +764,12 @@ p {
   }
   20% {
     opacity: 1;
-    transform: scaleX(1.06);
+    transform: scaleX(1.08);
     filter: brightness(1.46);
   }
   100% {
     opacity: 0;
-    transform: scaleX(1.22);
+    transform: scaleX(1.28);
     filter: brightness(1.14);
   }
 }
@@ -784,10 +806,17 @@ p {
   100% { transform: scale(1); filter: brightness(1); }
 }
 
-@keyframes avatarCounter {
+@keyframes avatarCounterPlayer {
   0% { transform: translateX(0) rotate(0deg); }
   25% { transform: translateX(-8px) rotate(-6deg); }
-  60% { transform: translateX(8px) rotate(5deg); filter: brightness(1.2); }
+  60% { transform: translateX(12px) rotate(5deg); filter: brightness(1.2); }
+  100% { transform: translateX(0) rotate(0deg); }
+}
+
+@keyframes avatarCounterCpu {
+  0% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(8px) rotate(6deg); }
+  60% { transform: translateX(-12px) rotate(-5deg); filter: brightness(1.2); }
   100% { transform: translateX(0) rotate(0deg); }
 }
 

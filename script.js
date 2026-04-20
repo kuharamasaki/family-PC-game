@@ -310,7 +310,7 @@ function resolveTurn(playerSkillId, forcedCpuSkillId = null) {
     markUsed(state.playerHand, playerSkillId);
     markUsed(state.cpuHand, cpuSkillId);
 
-    const summary = executeResolution(playerSkill, cpuSkill);
+    const summary = executeResolutionV2(playerSkill, cpuSkill);
     state.lastReveal = { playerSkill, cpuSkill };
     state.logEntries.unshift({
       label: `T${state.turn}`,
@@ -391,6 +391,7 @@ function executeResolution(playerSkill, cpuSkill) {
   const cpuGuard = cpuSkill.id === "guard";
   const playerCounter = canCounter(playerSkill, cpuSkill);
   const cpuCounter = canCounter(cpuSkill, playerSkill);
+  const offenseClash = isAttackSkill(playerSkill) && isAttackSkill(cpuSkill);
   const playerAttackSealed = cpuCounter && isAttackSkill(playerSkill);
   const cpuAttackSealed = playerCounter && isAttackSkill(cpuSkill);
 
@@ -447,6 +448,80 @@ function executeResolution(playerSkill, cpuSkill) {
 
 function canCounter(counterSkill, targetSkill) {
   return counterSkill.id === "counter" && ["attack", "heavy"].includes(targetSkill.id);
+}
+
+function executeResolutionV2(playerSkill, cpuSkill) {
+  const notes = [];
+  const playerCtx = { skill: playerSkill, charge: state.playerCharge, chargeSpent: false };
+  const cpuCtx = { skill: cpuSkill, charge: state.cpuCharge, chargeSpent: false };
+
+  if (playerSkill.id === "charge") {
+    state.playerCharge += chargeBonus(state.playerCharacter);
+    notes.push("閾ｪ+貅懊ａ");
+  }
+  if (cpuSkill.id === "charge") {
+    state.cpuCharge += chargeBonus(state.cpuCharacter);
+    notes.push("謨ｵ+貅懊ａ");
+  }
+
+  const playerGuard = playerSkill.id === "guard";
+  const cpuGuard = cpuSkill.id === "guard";
+  const playerCounter = canCounter(playerSkill, cpuSkill);
+  const cpuCounter = canCounter(cpuSkill, playerSkill);
+  const offenseClash = isAttackSkill(playerSkill) && isAttackSkill(cpuSkill);
+  const playerAttackSealed = cpuCounter && isAttackSkill(playerSkill);
+  const cpuAttackSealed = playerCounter && isAttackSkill(cpuSkill);
+
+  if (playerCounter) {
+    const damage = adjustedDamage(30, state.playerCharacter, state.cpuCharacter, false);
+    state.cpuHp -= damage;
+    notes.push(`謨ｵ-${damage}`);
+  }
+  if (cpuCounter) {
+    const damage = adjustedDamage(30, state.cpuCharacter, state.playerCharacter, false);
+    state.playerHp -= damage;
+    notes.push(`閾ｪ-${damage}`);
+  }
+
+  if (offenseClash) {
+    notes.push("逶ｴ謇九■");
+  } else {
+    applySkillDamage(playerCtx, state.playerCharacter, state.cpuCharacter, cpuGuard, playerAttackSealed, "cpu", notes);
+    applySkillDamage(cpuCtx, state.cpuCharacter, state.playerCharacter, playerGuard, cpuAttackSealed, "player", notes);
+  }
+
+  spendCharge(playerCtx, "player");
+  spendCharge(cpuCtx, "cpu");
+  state.playerHp = Math.max(0, state.playerHp);
+  state.cpuHp = Math.max(0, state.cpuHp);
+
+  return { short: notes.join(" / ") || "NO CHANGE", notes, reason: summarizeReason(notes, playerSkill, cpuSkill) };
+}
+
+function applySkillDamage(ctx, attacker, defender, defenderGuarding, sealed, target, notes) {
+  if (sealed) return;
+  const damage = heavyOnlyDamage(ctx, attacker, defender);
+  if (damage <= 0) return;
+
+  if (defenderGuarding) {
+    notes.push(target === "cpu" ? "謨ｵ髦ｲ蠕｡" : "閾ｪ髦ｲ蠕｡");
+    return;
+  }
+
+  if (target === "cpu") {
+    state.cpuHp -= damage;
+    notes.push(`謨ｵ-${damage}`);
+    return;
+  }
+
+  state.playerHp -= damage;
+  notes.push(`閾ｪ-${damage}`);
+}
+
+function heavyOnlyDamage(ctx, attacker, defender) {
+  if (ctx.skill.id !== "heavy") return 0;
+  ctx.chargeSpent = true;
+  return adjustedDamage(50 + ctx.charge, attacker, defender, false);
 }
 
 function isAttackSkill(skill) {
