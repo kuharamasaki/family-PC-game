@@ -161,6 +161,7 @@ const els = {
   cpuHand: document.querySelector("#cpuHand"),
   revealText: document.querySelector("#revealText"),
   resultReason: document.querySelector("#resultReason"),
+  resultOverlay: document.querySelector("#resultOverlay"),
   battleLog: document.querySelector("#battleLog"),
   resultBadge: document.querySelector("#resultBadge"),
   revealPanel: document.querySelector("#revealPanel"),
@@ -317,7 +318,7 @@ function resolveTurn(playerSkillId, forcedCpuSkillId = null) {
     markUsed(state.playerHand, playerSkillId);
     markUsed(state.cpuHand, cpuSkillId);
 
-    const summary = executeResolutionV2(playerSkill, cpuSkill);
+    const summary = executeResolutionV3(playerSkill, cpuSkill);
     state.lastReveal = { playerSkill, cpuSkill };
     state.logEntries.unshift({
       label: `T${state.turn}`,
@@ -458,6 +459,152 @@ function executeResolution(playerSkill, cpuSkill) {
 
 function canCounter(counterSkill, targetSkill) {
   return counterSkill.id === "counter" && ["attack", "heavy"].includes(targetSkill.id);
+}
+
+function executeResolutionV3(playerSkill, cpuSkill) {
+  const notes = [];
+  const playerCtx = { skill: playerSkill, charge: state.playerCharge, chargeSpent: false };
+  const cpuCtx = { skill: cpuSkill, charge: state.cpuCharge, chargeSpent: false };
+
+  if (playerSkill.id === "charge") {
+    state.playerCharge += chargeBonus(state.playerCharacter);
+    notes.push("自+溜め");
+  }
+  if (cpuSkill.id === "charge") {
+    state.cpuCharge += chargeBonus(state.cpuCharacter);
+    notes.push("敵+溜め");
+  }
+
+  if (playerSkill.id === "heal") {
+    state.playerHp = Math.min(state.playerCharacter.hp, state.playerHp + 25);
+    notes.push("自+回復");
+  }
+  if (cpuSkill.id === "heal") {
+    state.cpuHp = Math.min(state.cpuCharacter.hp, state.cpuHp + 25);
+    notes.push("敵+回復");
+  }
+
+  const playerGuard = playerSkill.id === "guard";
+  const cpuGuard = cpuSkill.id === "guard";
+  const playerCounter = canCounter(playerSkill, cpuSkill);
+  const cpuCounter = canCounter(cpuSkill, playerSkill);
+  const attackVsHeavy =
+    (playerSkill.id === "attack" && cpuSkill.id === "heavy") ||
+    (playerSkill.id === "heavy" && cpuSkill.id === "attack");
+  const attackVsCharge =
+    (playerSkill.id === "attack" && cpuSkill.id === "charge") ||
+    (playerSkill.id === "charge" && cpuSkill.id === "attack");
+  const offenseClash = isAttackSkill(playerSkill) && isAttackSkill(cpuSkill) && !attackVsHeavy;
+  const playerAttackSealed = cpuCounter && isAttackSkill(playerSkill);
+  const cpuAttackSealed = playerCounter && isAttackSkill(cpuSkill);
+
+  if (playerCounter) {
+    const damage = adjustedDamage(30, state.playerCharacter, state.cpuCharacter, false);
+    state.cpuHp -= damage;
+    notes.push(`敵-${damage}`);
+  }
+  if (cpuCounter) {
+    const damage = adjustedDamage(30, state.cpuCharacter, state.playerCharacter, false);
+    state.playerHp -= damage;
+    notes.push(`自-${damage}`);
+  }
+
+  if (attackVsHeavy) {
+    resolveAttackHeavyClashV3(playerCtx, cpuCtx, notes);
+  } else if (attackVsCharge) {
+    resolveAttackChargeClashV3(playerCtx, cpuCtx, notes);
+  } else if (offenseClash) {
+    notes.push("相打ち");
+  } else {
+    applySkillDamageV3(playerCtx, state.playerCharacter, state.cpuCharacter, cpuGuard, playerAttackSealed, "cpu", notes);
+    applySkillDamageV3(cpuCtx, state.cpuCharacter, state.playerCharacter, playerGuard, cpuAttackSealed, "player", notes);
+  }
+
+  spendCharge(playerCtx, "player");
+  spendCharge(cpuCtx, "cpu");
+  state.playerHp = Math.max(0, state.playerHp);
+  state.cpuHp = Math.max(0, state.cpuHp);
+
+  return { short: notes.join(" / ") || "変化なし", notes, reason: summarizeReason(notes, playerSkill, cpuSkill) };
+}
+
+function applySkillDamageV3(ctx, attacker, defender, defenderGuarding, sealed, target, notes) {
+  if (sealed) return;
+  const damage = heavyOnlyDamageV3(ctx, attacker, defender);
+  if (damage <= 0) return;
+
+  if (defenderGuarding) {
+    notes.push(target === "cpu" ? "敵防御" : "自防御");
+    return;
+  }
+
+  if (target === "cpu") {
+    state.cpuHp -= damage;
+    notes.push(`敵-${damage}`);
+    return;
+  }
+
+  state.playerHp -= damage;
+  notes.push(`自-${damage}`);
+}
+
+function resolveAttackHeavyClashV3(playerCtx, cpuCtx, notes) {
+  const playerAttackDamage = attackOnlyDamageV3(playerCtx, state.playerCharacter, state.cpuCharacter);
+  const cpuAttackDamage = attackOnlyDamageV3(cpuCtx, state.cpuCharacter, state.playerCharacter);
+  const playerHeavyDamage = heavyOnlyDamageV3(playerCtx, state.playerCharacter, state.cpuCharacter);
+  const cpuHeavyDamage = heavyOnlyDamageV3(cpuCtx, state.cpuCharacter, state.playerCharacter);
+
+  if (playerCtx.skill.id === "attack" && cpuCtx.skill.id === "heavy") {
+    const damage = Math.max(0, cpuHeavyDamage - playerAttackDamage);
+    if (damage > 0) {
+      state.playerHp -= damage;
+      notes.push(`自-${damage}`);
+    } else {
+      notes.push("相殺");
+    }
+    return;
+  }
+
+  if (playerCtx.skill.id === "heavy" && cpuCtx.skill.id === "attack") {
+    const damage = Math.max(0, playerHeavyDamage - cpuAttackDamage);
+    if (damage > 0) {
+      state.cpuHp -= damage;
+      notes.push(`敵-${damage}`);
+    } else {
+      notes.push("相殺");
+    }
+  }
+}
+
+function resolveAttackChargeClashV3(playerCtx, cpuCtx, notes) {
+  if (playerCtx.skill.id === "attack" && cpuCtx.skill.id === "charge") {
+    const damage = attackOnlyDamageV3(playerCtx, state.playerCharacter, state.cpuCharacter);
+    if (damage > 0) {
+      state.cpuHp -= damage;
+      notes.push(`敵-${damage}`);
+    }
+    return;
+  }
+
+  if (playerCtx.skill.id === "charge" && cpuCtx.skill.id === "attack") {
+    const damage = attackOnlyDamageV3(cpuCtx, state.cpuCharacter, state.playerCharacter);
+    if (damage > 0) {
+      state.playerHp -= damage;
+      notes.push(`自-${damage}`);
+    }
+  }
+}
+
+function heavyOnlyDamageV3(ctx, attacker, defender) {
+  if (ctx.skill.id !== "heavy") return 0;
+  ctx.chargeSpent = true;
+  return adjustedDamage(50 + ctx.charge, attacker, defender, false);
+}
+
+function attackOnlyDamageV3(ctx, attacker, defender) {
+  if (ctx.skill.id !== "attack") return 0;
+  ctx.chargeSpent = true;
+  return adjustedDamage(30 + ctx.charge, attacker, defender, false);
 }
 
 function executeResolutionV2(playerSkill, cpuSkill) {
@@ -900,6 +1047,7 @@ function renderHeader() {
   els.cpuAvatar.dataset.character = state.cpuCharacter?.id ?? "neutral";
   setAvatarImage(els.playerAvatarImg, state.playerCharacter);
   setAvatarImage(els.cpuAvatarImg, state.cpuCharacter);
+  updateResultOverlay();
 
   if (state.phase === "character") {
     els.phaseTitle.textContent = "キャラ選択";
@@ -974,6 +1122,22 @@ function setBadge(label, tone = "") {
   els.resultBadge.className = `result-badge${tone ? ` ${tone}` : ""}`;
 }
 
+function updateResultOverlay() {
+  if (!els.resultOverlay) return;
+  const isResult = state.phase === "result";
+  els.resultOverlay.hidden = !isResult;
+
+  if (!isResult) {
+    els.resultOverlay.textContent = "";
+    els.resultOverlay.className = "result-overlay";
+    return;
+  }
+
+  const label = state.winner === "win" ? "WIN" : state.winner === "lose" ? "LOSE" : "DRAW";
+  els.resultOverlay.textContent = label;
+  els.resultOverlay.className = `result-overlay ${state.winner}`;
+}
+
 function resultMessage() {
   if (state.winner === "win") return "読み勝ちです。もう一度挑めます。";
   if (state.winner === "lose") return "CPUに読まれました。順番を変えて再戦。";
@@ -1045,9 +1209,35 @@ function renderLog() {
   state.logEntries.slice(0, 4).forEach((entry) => {
     const item = document.createElement("article");
     item.className = "log-item compact-item";
-    item.innerHTML = `<strong>${entry.label}</strong><span>${entry.text}</span>`;
+    item.innerHTML = `<strong>${normalizeBattleLogText(entry.label)}</strong><span>${normalizeBattleLogText(entry.text)}</span>`;
     els.battleLog.appendChild(item);
   });
+}
+
+function normalizeBattleLogText(text) {
+  const value = String(text ?? "");
+  const replacements = new Map([
+    ['髢句ｧ・', '開始'],
+    ['縺ｾ縺壹・繧ｭ繝｣繝ｩ繧ｯ繧ｿ繝ｼ繧帝∈謚・', 'まずはキャラクターを選んでください。'],
+    ['PLAYER 1 縺ｮ谺｡縺ｯ PLAYER 2 縺後く繝｣繝ｩ繧帝∈謚・', 'PLAYER 1 の次は PLAYER 2 がキャラクターを選びます。'],
+    ['PLAYER 1 縺後せ繧ｭ繝ｫ繧帝∈謚・', 'PLAYER 1 がスキルを選びました。'],
+    ['髢ｾ・ｪ+雋・㈱・・', '自+溜め'],
+    ['隰ｨ・ｵ+雋・㈱・・', '敵+溜め'],
+    ['鬮｢・ｾ繝ｻ・ｪ+蝗槫ｾｩ', '自+回復'],
+    ['髫ｰ・ｨ繝ｻ・ｵ+蝗槫ｾｩ', '敵+回復'],
+    ['隰ｨ・ｵ鬮ｦ・ｲ陟包ｽ｡', '敵防御'],
+    ['髢ｾ・ｪ鬮ｦ・ｲ陟包ｽ｡', '自防御'],
+    ['騾ｶ・ｴ隰・ｹ昶蔓', '相打ち'],
+    ['螟牙喧縺ｪ縺・', '変化なし'],
+    ['NO CHANGE', '変化なし'],
+  ]);
+
+  if (replacements.has(value)) return replacements.get(value);
+
+  let normalized = value;
+  normalized = normalized.replace(/隰ｨ・ｵ-(\d+)/g, '敵-$1');
+  normalized = normalized.replace(/髢ｾ・ｪ-(\d+)/g, '自-$1');
+  return normalized;
 }
 
 function buildCard(skill) {
