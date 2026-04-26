@@ -318,7 +318,7 @@ function resolveTurn(playerSkillId, forcedCpuSkillId = null) {
     markUsed(state.playerHand, playerSkillId);
     markUsed(state.cpuHand, cpuSkillId);
 
-    const summary = executeResolutionV3(playerSkill, cpuSkill);
+    const summary = executeResolutionV4(playerSkill, cpuSkill);
     state.lastReveal = { playerSkill, cpuSkill };
     state.logEntries.unshift({
       label: `T${state.turn}`,
@@ -459,6 +459,168 @@ function executeResolution(playerSkill, cpuSkill) {
 
 function canCounter(counterSkill, targetSkill) {
   return counterSkill.id === "counter" && ["attack", "heavy"].includes(targetSkill.id);
+}
+
+function executeResolutionV4(playerSkill, cpuSkill) {
+  const notes = [];
+  const playerCtx = { skill: playerSkill, charge: state.playerCharge, chargeSpent: false };
+  const cpuCtx = { skill: cpuSkill, charge: state.cpuCharge, chargeSpent: false };
+
+  if (playerSkill.id === "charge") {
+    state.playerCharge += chargeBonus(state.playerCharacter);
+    notes.push("自+溜め");
+  }
+  if (cpuSkill.id === "charge") {
+    state.cpuCharge += chargeBonus(state.cpuCharacter);
+    notes.push("敵+溜め");
+  }
+
+  if (playerSkill.id === "heal") {
+    state.playerHp = Math.min(state.playerCharacter.hp, state.playerHp + 25);
+    notes.push("自+回復");
+  }
+  if (cpuSkill.id === "heal") {
+    state.cpuHp = Math.min(state.cpuCharacter.hp, state.cpuHp + 25);
+    notes.push("敵+回復");
+  }
+
+  const playerGuard = playerSkill.id === "guard";
+  const cpuGuard = cpuSkill.id === "guard";
+  const playerCounter = canCounter(playerSkill, cpuSkill);
+  const cpuCounter = canCounter(cpuSkill, playerSkill);
+
+  if (playerCounter) {
+    const damage = adjustedDamage(30, state.playerCharacter, state.cpuCharacter, false);
+    state.cpuHp -= damage;
+    notes.push(`敵-${damage}`);
+  }
+  if (cpuCounter) {
+    const damage = adjustedDamage(30, state.cpuCharacter, state.playerCharacter, false);
+    state.playerHp -= damage;
+    notes.push(`自-${damage}`);
+  }
+
+  const playerSealed = cpuCounter && isAttackSkill(playerSkill);
+  const cpuSealed = playerCounter && isAttackSkill(cpuSkill);
+  const specialResolved = resolveSpecialMatchupsV4(playerCtx, cpuCtx, playerGuard, cpuGuard, playerSealed, cpuSealed, notes);
+
+  if (!specialResolved) {
+    const offenseClash = isAttackSkill(playerSkill) && isAttackSkill(cpuSkill);
+    if (offenseClash) {
+      notes.push("相打ち");
+    } else {
+      applySkillDamageV4(playerCtx, state.playerCharacter, state.cpuCharacter, cpuGuard, playerSealed, "cpu", notes);
+      applySkillDamageV4(cpuCtx, state.cpuCharacter, state.playerCharacter, playerGuard, cpuSealed, "player", notes);
+    }
+  }
+
+  spendCharge(playerCtx, "player");
+  spendCharge(cpuCtx, "cpu");
+  state.playerHp = Math.max(0, state.playerHp);
+  state.cpuHp = Math.max(0, state.cpuHp);
+
+  return { short: notes.join(" / ") || "変化なし", notes, reason: summarizeReason(notes, playerSkill, cpuSkill) };
+}
+
+function resolveSpecialMatchupsV4(playerCtx, cpuCtx, playerGuard, cpuGuard, playerSealed, cpuSealed, notes) {
+  const playerId = playerCtx.skill.id;
+  const cpuId = cpuCtx.skill.id;
+
+  if (playerId === "attack" && cpuId === "heavy") {
+    if (playerSealed || cpuSealed) return true;
+    const attackDamage = attackOnlyDamageV4(playerCtx, state.playerCharacter, state.cpuCharacter);
+    const heavyDamage = heavyOnlyDamageV4(cpuCtx, state.cpuCharacter, state.playerCharacter);
+    return applyDifferenceDamageV4("player", heavyDamage, attackDamage, playerGuard, notes);
+  }
+
+  if (playerId === "heavy" && cpuId === "attack") {
+    if (playerSealed || cpuSealed) return true;
+    const heavyDamage = heavyOnlyDamageV4(playerCtx, state.playerCharacter, state.cpuCharacter);
+    const attackDamage = attackOnlyDamageV4(cpuCtx, state.cpuCharacter, state.playerCharacter);
+    return applyDifferenceDamageV4("cpu", heavyDamage, attackDamage, cpuGuard, notes);
+  }
+
+  if (playerId === "attack" && cpuId === "charge") {
+    if (playerSealed) return true;
+    const damage = attackOnlyDamageV4(playerCtx, state.playerCharacter, state.cpuCharacter);
+    return applyFlatDamageV4("cpu", damage, cpuGuard, notes);
+  }
+
+  if (playerId === "charge" && cpuId === "attack") {
+    if (cpuSealed) return true;
+    const damage = attackOnlyDamageV4(cpuCtx, state.cpuCharacter, state.playerCharacter);
+    return applyFlatDamageV4("player", damage, playerGuard, notes);
+  }
+
+  return false;
+}
+
+function applyDifferenceDamageV4(target, strongerDamage, weakerDamage, guard, notes) {
+  const diff = Math.max(0, strongerDamage - weakerDamage);
+  if (guard) {
+    notes.push(target === "cpu" ? "敵防御" : "自防御");
+    return true;
+  }
+  if (diff <= 0) {
+    notes.push("相殺");
+    return true;
+  }
+  if (target === "cpu") {
+    state.cpuHp -= diff;
+    notes.push(`敵-${diff}`);
+  } else {
+    state.playerHp -= diff;
+    notes.push(`自-${diff}`);
+  }
+  return true;
+}
+
+function applyFlatDamageV4(target, damage, guard, notes) {
+  if (guard) {
+    notes.push(target === "cpu" ? "敵防御" : "自防御");
+    return true;
+  }
+  if (damage <= 0) return true;
+  if (target === "cpu") {
+    state.cpuHp -= damage;
+    notes.push(`敵-${damage}`);
+  } else {
+    state.playerHp -= damage;
+    notes.push(`自-${damage}`);
+  }
+  return true;
+}
+
+function applySkillDamageV4(ctx, attacker, defender, defenderGuarding, sealed, target, notes) {
+  if (sealed) return;
+  const damage = heavyOnlyDamageV4(ctx, attacker, defender);
+  if (damage <= 0) return;
+
+  if (defenderGuarding) {
+    notes.push(target === "cpu" ? "敵防御" : "自防御");
+    return;
+  }
+
+  if (target === "cpu") {
+    state.cpuHp -= damage;
+    notes.push(`敵-${damage}`);
+    return;
+  }
+
+  state.playerHp -= damage;
+  notes.push(`自-${damage}`);
+}
+
+function heavyOnlyDamageV4(ctx, attacker, defender) {
+  if (ctx.skill.id !== "heavy") return 0;
+  ctx.chargeSpent = true;
+  return adjustedDamage(50 + ctx.charge, attacker, defender, false);
+}
+
+function attackOnlyDamageV4(ctx, attacker, defender) {
+  if (ctx.skill.id !== "attack") return 0;
+  ctx.chargeSpent = true;
+  return adjustedDamage(30 + ctx.charge, attacker, defender, false);
 }
 
 function executeResolutionV3(playerSkill, cpuSkill) {
@@ -1209,9 +1371,48 @@ function renderLog() {
   state.logEntries.slice(0, 4).forEach((entry) => {
     const item = document.createElement("article");
     item.className = "log-item compact-item";
-    item.innerHTML = `<strong>${normalizeBattleLogText(entry.label)}</strong><span>${normalizeBattleLogText(entry.text)}</span>`;
+    item.innerHTML = `<strong>${normalizeBattleLogTextV2(entry.label)}</strong><span>${normalizeBattleLogTextV2(entry.text)}</span>`;
     els.battleLog.appendChild(item);
   });
+}
+
+function normalizeBattleLogTextV2(text) {
+  let normalized = String(text ?? "");
+
+  const substringReplacements = [
+    ["髢句ｧ・", "開始"],
+    ["縺ｾ縺壹・繧ｭ繝｣繝ｩ繧ｯ繧ｿ繝ｼ繧帝∈謚・", "まずはキャラクターを選んでください。"],
+    ["PLAYER 1 縺ｮ谺｡縺ｯ PLAYER 2 縺後く繝｣繝ｩ繧帝∈謚・", "PLAYER 1 の次は PLAYER 2 がキャラクターを選びます。"],
+    ["PLAYER 1 縺後せ繧ｭ繝ｫ繧帝∈謚・", "PLAYER 1 がスキルを選びました。"],
+    ["髢ｾ・ｪ+雋・㈱・・", "自+溜め"],
+    ["隰ｨ・ｵ+雋・㈱・・", "敵+溜め"],
+    ["閾ｪ+貅懊ａ", "自+溜め"],
+    ["謨ｵ+貅懊ａ", "敵+溜め"],
+    ["鬮｢・ｾ繝ｻ・ｪ+蝗槫ｾｩ", "自+回復"],
+    ["髫ｰ・ｨ繝ｻ・ｵ+蝗槫ｾｩ", "敵+回復"],
+    ["閾ｪ+蝗槫ｾｩ", "自+回復"],
+    ["謨ｵ+蝗槫ｾｩ", "敵+回復"],
+    ["隰ｨ・ｵ鬮ｦ・ｲ陟包ｽ｡", "敵防御"],
+    ["髢ｾ・ｪ鬮ｦ・ｲ陟包ｽ｡", "自防御"],
+    ["謨ｵ髦ｲ蠕｡", "敵防御"],
+    ["閾ｪ髦ｲ蠕｡", "自防御"],
+    ["騾ｶ・ｴ隰・ｹ昶蔓", "相打ち"],
+    ["逶ｸ謇薙■", "相打ち"],
+    ["逶ｸ谿ｺ", "相殺"],
+    ["螟牙喧縺ｪ縺・", "変化なし"],
+    ["NO CHANGE", "変化なし"],
+  ];
+
+  substringReplacements.forEach(([from, to]) => {
+    normalized = normalized.split(from).join(to);
+  });
+
+  normalized = normalized.replace(/隰ｨ・ｵ-(\d+)/g, "敵-$1");
+  normalized = normalized.replace(/髢ｾ・ｪ-(\d+)/g, "自-$1");
+  normalized = normalized.replace(/謨ｵ-(\d+)/g, "敵-$1");
+  normalized = normalized.replace(/閾ｪ-(\d+)/g, "自-$1");
+
+  return normalized;
 }
 
 function normalizeBattleLogText(text) {
@@ -1228,6 +1429,8 @@ function normalizeBattleLogText(text) {
     ['隰ｨ・ｵ鬮ｦ・ｲ陟包ｽ｡', '敵防御'],
     ['髢ｾ・ｪ鬮ｦ・ｲ陟包ｽ｡', '自防御'],
     ['騾ｶ・ｴ隰・ｹ昶蔓', '相打ち'],
+    ['逶ｸ謇薙■', '相打ち'],
+    ['逶ｸ谿ｺ', '相殺'],
     ['螟牙喧縺ｪ縺・', '変化なし'],
     ['NO CHANGE', '変化なし'],
   ]);
