@@ -101,6 +101,60 @@ const SKILLS = [
 
 const TOTAL_TURNS = SKILLS.length;
 
+const MATCHUP_TABLE = {
+  attack: {
+    attack: { kind: "clash" },
+    guard: { kind: "independent" },
+    charge: { kind: "independent" },
+    heal: { kind: "independent" },
+    heavy: { kind: "difference", winner: "cpu", winnerMove: "heavy", loser: "player", loserMove: "attack" },
+    counter: { kind: "independent" },
+  },
+  guard: {
+    attack: { kind: "independent" },
+    guard: { kind: "independent" },
+    charge: { kind: "independent" },
+    heal: { kind: "independent" },
+    heavy: { kind: "independent" },
+    counter: { kind: "independent" },
+  },
+  charge: {
+    attack: { kind: "independent" },
+    guard: { kind: "independent" },
+    charge: { kind: "independent" },
+    heal: { kind: "independent" },
+    heavy: { kind: "independent" },
+    counter: { kind: "independent" },
+  },
+  heal: {
+    attack: { kind: "independent" },
+    guard: { kind: "independent" },
+    charge: { kind: "independent" },
+    heal: { kind: "independent" },
+    heavy: { kind: "independent" },
+    counter: { kind: "independent" },
+  },
+  heavy: {
+    attack: { kind: "difference", winner: "player", winnerMove: "heavy", loser: "cpu", loserMove: "attack" },
+    guard: { kind: "independent" },
+    charge: { kind: "independent" },
+    heal: { kind: "independent" },
+    heavy: { kind: "clash" },
+    counter: { kind: "independent" },
+  },
+  counter: {
+    attack: { kind: "independent" },
+    guard: { kind: "independent" },
+    charge: { kind: "independent" },
+    heal: { kind: "independent" },
+    heavy: { kind: "independent" },
+    counter: { kind: "independent" },
+  },
+};
+
+const SKILL_IDS = SKILLS.map((skill) => skill.id);
+validateMatchupTable();
+
 const BGM_TRACKS = {
   "last-card": {
     label: "最後の一枚",
@@ -318,7 +372,7 @@ function resolveTurn(playerSkillId, forcedCpuSkillId = null) {
     markUsed(state.playerHand, playerSkillId);
     markUsed(state.cpuHand, cpuSkillId);
 
-    const summary = executeResolutionV4(playerSkill, cpuSkill);
+    const summary = executeResolutionTable(playerSkill, cpuSkill);
     state.lastReveal = { playerSkill, cpuSkill };
     state.logEntries.unshift({
       label: `T${state.turn}`,
@@ -461,6 +515,162 @@ function canCounter(counterSkill, targetSkill) {
   return counterSkill.id === "counter" && ["attack", "heavy"].includes(targetSkill.id);
 }
 
+function validateMatchupTable() {
+  SKILL_IDS.forEach((leftId) => {
+    if (!MATCHUP_TABLE[leftId]) {
+      throw new Error(`Missing matchup row for ${leftId}`);
+    }
+
+    SKILL_IDS.forEach((rightId) => {
+      if (!MATCHUP_TABLE[leftId][rightId]) {
+        throw new Error(`Missing matchup rule for ${leftId} vs ${rightId}`);
+      }
+    });
+  });
+}
+
+function executeResolutionTable(playerSkill, cpuSkill) {
+  const notes = [];
+  const playerCtx = { owner: "player", skill: playerSkill, charge: state.playerCharge, chargeSpent: false };
+  const cpuCtx = { owner: "cpu", skill: cpuSkill, charge: state.cpuCharge, chargeSpent: false };
+  const matchup = MATCHUP_TABLE[playerSkill.id]?.[cpuSkill.id] ?? { kind: "independent" };
+
+  applySelfSkillEffects(playerCtx, state.playerCharacter, notes);
+  applySelfSkillEffects(cpuCtx, state.cpuCharacter, notes);
+
+  const counterState = resolveCounterEffects(playerCtx, cpuCtx, notes);
+
+  if (matchup.kind === "difference") {
+    resolveDifferenceMatchup(matchup, playerCtx, cpuCtx, notes, counterState);
+  } else if (matchup.kind === "clash") {
+    resolveClashMatchup(playerCtx, cpuCtx, notes, counterState);
+  } else {
+    resolveIndependentMatchup(playerCtx, cpuCtx, notes, counterState);
+  }
+
+  spendCharge(playerCtx, "player");
+  spendCharge(cpuCtx, "cpu");
+  state.playerHp = Math.max(0, state.playerHp);
+  state.cpuHp = Math.max(0, state.cpuHp);
+
+  return {
+    short: notes.join(" / ") || "変化なし",
+    notes,
+    reason: summarizeReason(notes, playerSkill, cpuSkill),
+  };
+}
+
+function applySelfSkillEffects(ctx, character, notes) {
+  if (ctx.skill.id === "charge") {
+    const bonus = chargeBonus(character);
+    if (ctx.owner === "player") state.playerCharge += bonus;
+    else state.cpuCharge += bonus;
+    notes.push(ctx.owner === "player" ? "自+溜め" : "敵+溜め");
+    return;
+  }
+
+  if (ctx.skill.id === "heal") {
+    if (ctx.owner === "player") state.playerHp = Math.min(character.hp, state.playerHp + 25);
+    else state.cpuHp = Math.min(character.hp, state.cpuHp + 25);
+    notes.push(ctx.owner === "player" ? "自+回復" : "敵+回復");
+  }
+}
+
+function resolveCounterEffects(playerCtx, cpuCtx, notes) {
+  const playerCounter = canCounter(playerCtx.skill, cpuCtx.skill);
+  const cpuCounter = canCounter(cpuCtx.skill, playerCtx.skill);
+
+  if (playerCounter) {
+    const damage = adjustedDamage(30, state.playerCharacter, state.cpuCharacter, false);
+    state.cpuHp -= damage;
+    notes.push(`敵-${damage}`);
+  }
+
+  if (cpuCounter) {
+    const damage = adjustedDamage(30, state.cpuCharacter, state.playerCharacter, false);
+    state.playerHp -= damage;
+    notes.push(`自-${damage}`);
+  }
+
+  return {
+    playerSealed: cpuCounter && isAttackSkill(playerCtx.skill),
+    cpuSealed: playerCounter && isAttackSkill(cpuCtx.skill),
+  };
+}
+
+function resolveDifferenceMatchup(matchup, playerCtx, cpuCtx, notes, counterState) {
+  const winnerCtx = matchup.winner === "player" ? playerCtx : cpuCtx;
+  const loserCtx = matchup.loser === "player" ? playerCtx : cpuCtx;
+  const winnerSealed = matchup.winner === "player" ? counterState.playerSealed : counterState.cpuSealed;
+  const loserSealed = matchup.loser === "player" ? counterState.playerSealed : counterState.cpuSealed;
+
+  if (winnerSealed || loserSealed) return;
+
+  const winnerDamage = damageForMove(matchup.winnerMove, winnerCtx);
+  const loserDamage = damageForMove(matchup.loserMove, loserCtx);
+  const diff = Math.max(0, winnerDamage - loserDamage);
+
+  if (diff <= 0) {
+    notes.push("相殺");
+    return;
+  }
+
+  applyDamageToOwner(matchup.loser, diff, notes, false);
+}
+
+function resolveClashMatchup(playerCtx, cpuCtx, notes, counterState) {
+  if (counterState.playerSealed || counterState.cpuSealed) return;
+  notes.push("相打ち");
+}
+
+function resolveIndependentMatchup(playerCtx, cpuCtx, notes, counterState) {
+  resolveIndependentAttack(playerCtx, "cpu", cpuCtx.skill.id === "guard", counterState.playerSealed, notes);
+  resolveIndependentAttack(cpuCtx, "player", playerCtx.skill.id === "guard", counterState.cpuSealed, notes);
+}
+
+function resolveIndependentAttack(ctx, targetOwner, targetGuarding, sealed, notes) {
+  if (sealed) return;
+
+  const damage = damageForMove(ctx.skill.id, ctx);
+  if (damage <= 0) return;
+
+  if (targetGuarding) {
+    notes.push(targetOwner === "cpu" ? "敵防御" : "自防御");
+    return;
+  }
+
+  applyDamageToOwner(targetOwner, damage, notes, false);
+}
+
+function damageForMove(moveId, ctx) {
+  if (moveId === "attack") {
+    ctx.chargeSpent = true;
+    const attacker = ctx.owner === "player" ? state.playerCharacter : state.cpuCharacter;
+    const defender = ctx.owner === "player" ? state.cpuCharacter : state.playerCharacter;
+    return adjustedDamage(30 + ctx.charge, attacker, defender, false);
+  }
+
+  if (moveId === "heavy") {
+    ctx.chargeSpent = true;
+    const attacker = ctx.owner === "player" ? state.playerCharacter : state.cpuCharacter;
+    const defender = ctx.owner === "player" ? state.cpuCharacter : state.playerCharacter;
+    return adjustedDamage(50 + ctx.charge, attacker, defender, false);
+  }
+
+  return 0;
+}
+
+function applyDamageToOwner(owner, damage, notes) {
+  if (damage <= 0) return;
+  if (owner === "player") {
+    state.playerHp -= damage;
+    notes.push(`自-${damage}`);
+    return;
+  }
+  state.cpuHp -= damage;
+  notes.push(`敵-${damage}`);
+}
+
 function executeResolutionV4(playerSkill, cpuSkill) {
   const notes = [];
   const playerCtx = { skill: playerSkill, charge: state.playerCharge, chargeSpent: false };
@@ -549,6 +759,18 @@ function resolveSpecialMatchupsV4(playerCtx, cpuCtx, playerGuard, cpuGuard, play
   if (playerId === "charge" && cpuId === "attack") {
     if (cpuSealed) return true;
     const damage = attackOnlyDamageV4(cpuCtx, state.cpuCharacter, state.playerCharacter);
+    return applyFlatDamageV4("player", damage, playerGuard, notes);
+  }
+
+  if (playerId === "heavy" && cpuId === "charge") {
+    if (playerSealed) return true;
+    const damage = heavyOnlyDamageV4(playerCtx, state.playerCharacter, state.cpuCharacter);
+    return applyFlatDamageV4("cpu", damage, cpuGuard, notes);
+  }
+
+  if (playerId === "charge" && cpuId === "heavy") {
+    if (cpuSealed) return true;
+    const damage = heavyOnlyDamageV4(cpuCtx, state.cpuCharacter, state.playerCharacter);
     return applyFlatDamageV4("player", damage, playerGuard, notes);
   }
 
