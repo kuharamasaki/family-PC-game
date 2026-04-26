@@ -620,6 +620,20 @@ function resolveDifferenceMatchup(matchup, playerCtx, cpuCtx, notes, counterStat
 
 function resolveClashMatchup(playerCtx, cpuCtx, notes, counterState) {
   if (counterState.playerSealed || counterState.cpuSealed) return;
+
+  if (playerCtx.skill.id === "attack" && cpuCtx.skill.id === "attack") {
+    const playerDamage = damageForMove("attack", playerCtx);
+    const cpuDamage = damageForMove("attack", cpuCtx);
+    if (playerDamage > cpuDamage) {
+      applyDamageToOwner("cpu", playerDamage - cpuDamage, notes);
+      return;
+    }
+    if (cpuDamage > playerDamage) {
+      applyDamageToOwner("player", cpuDamage - playerDamage, notes);
+      return;
+    }
+  }
+
   notes.push("相打ち");
 }
 
