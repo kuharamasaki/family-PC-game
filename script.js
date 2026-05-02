@@ -247,6 +247,7 @@ const els = {
   battleLog: document.querySelector("#battleLog"),
   resultBadge: document.querySelector("#resultBadge"),
   revealPanel: document.querySelector("#revealPanel"),
+  backgroundCanvas: document.querySelector("#backgroundEffects"),
   playerCard: document.querySelector(".hp-card.player"),
   cpuCard: document.querySelector(".hp-card.cpu"),
   modeSelect: document.querySelector("#modeSelect"),
@@ -261,6 +262,13 @@ const els = {
 const audio = {
   ctx: null,
   bgmEl: null,
+};
+
+const backgroundFx = {
+  ctx: null,
+  effects: [],
+  rafId: 0,
+  resizeBound: false,
 };
 
 const ANIMATION_CLASSES = [
@@ -299,8 +307,221 @@ function resetGame() {
   state.winner = null;
   state.resolving = false;
   state.resultReason = "勝負の決め手がここに出ます。";
+  resetBackgroundEffects();
   stopBgm();
   render();
+}
+
+function themeHasAnimatedBackground(theme) {
+  return ["volcano", "underwater", "jungle", "cave", "space", "storm"].includes(theme);
+}
+
+function resetBackgroundEffects() {
+  backgroundFx.effects = [];
+}
+
+function resizeBackgroundCanvas() {
+  if (!els.backgroundCanvas) return;
+  const ratio = Math.max(1, window.devicePixelRatio || 1);
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  els.backgroundCanvas.width = Math.floor(width * ratio);
+  els.backgroundCanvas.height = Math.floor(height * ratio);
+  els.backgroundCanvas.style.width = `${width}px`;
+  els.backgroundCanvas.style.height = `${height}px`;
+  if (backgroundFx.ctx) {
+    backgroundFx.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    backgroundFx.ctx.scale(ratio, ratio);
+  }
+}
+
+function initBackgroundEffects() {
+  if (!els.backgroundCanvas || backgroundFx.ctx) return;
+  backgroundFx.ctx = els.backgroundCanvas.getContext("2d");
+  resizeBackgroundCanvas();
+  if (!backgroundFx.resizeBound) {
+    window.addEventListener("resize", resizeBackgroundCanvas);
+    backgroundFx.resizeBound = true;
+  }
+  backgroundFx.rafId = window.requestAnimationFrame(stepBackgroundEffects);
+}
+
+function spawnBackgroundEffect(theme, width, height) {
+  switch (theme) {
+    case "volcano":
+      backgroundFx.effects.push({
+        type: "lava",
+        x: width * (0.38 + Math.random() * 0.24),
+        y: height * (0.78 + Math.random() * 0.08),
+        vx: (Math.random() - 0.5) * 0.9,
+        vy: -(2.4 + Math.random() * 2.2),
+        size: 3 + Math.random() * 4,
+        life: 40 + Math.random() * 24,
+      });
+      break;
+    case "underwater":
+      backgroundFx.effects.push({
+        type: "fish",
+        x: -30,
+        y: height * (0.36 + Math.random() * 0.34),
+        vx: 1.2 + Math.random() * 2.1,
+        size: 10 + Math.random() * 8,
+        hue: 180 + Math.random() * 40,
+      });
+      break;
+    case "jungle":
+      backgroundFx.effects.push({
+        type: "butterfly",
+        x: -20,
+        y: height * (0.34 + Math.random() * 0.28),
+        vx: 1.4 + Math.random() * 1.8,
+        amplitude: 12 + Math.random() * 18,
+        t: Math.random() * Math.PI * 2,
+        size: 4 + Math.random() * 4,
+      });
+      break;
+    case "cave":
+      backgroundFx.effects.push({
+        type: "drop",
+        x: width * (0.25 + Math.random() * 0.5),
+        y: -10,
+        vy: 2.4 + Math.random() * 2.2,
+        size: 4 + Math.random() * 3,
+      });
+      break;
+    case "space":
+      backgroundFx.effects.push({
+        type: "star",
+        x: width * (0.55 + Math.random() * 0.45),
+        y: height * Math.random() * 0.35,
+        vx: -(2.6 + Math.random() * 2.2),
+        vy: 1.4 + Math.random() * 1.8,
+        tail: 14 + Math.random() * 18,
+      });
+      break;
+    case "storm":
+      backgroundFx.effects.push({
+        type: "lightning",
+        x: width * (0.2 + Math.random() * 0.6),
+        life: 0,
+        duration: 8 + Math.random() * 7,
+        sway: 20 + Math.random() * 24,
+      });
+      break;
+    default:
+      break;
+  }
+}
+
+function drawBackgroundEffects(theme, width, height) {
+  const ctx = backgroundFx.ctx;
+  if (!ctx) return;
+
+  if (themeHasAnimatedBackground(theme)) {
+    const spawnChance = theme === "storm" ? 0.035 : 0.08;
+    if (Math.random() < spawnChance) {
+      spawnBackgroundEffect(theme, width, height);
+    }
+  } else if (backgroundFx.effects.length) {
+    resetBackgroundEffects();
+  }
+
+  for (let i = backgroundFx.effects.length - 1; i >= 0; i -= 1) {
+    const effect = backgroundFx.effects[i];
+
+    switch (effect.type) {
+      case "lava":
+        effect.x += effect.vx;
+        effect.y += effect.vy;
+        effect.life -= 1;
+        ctx.fillStyle = `rgba(255, ${140 + Math.random() * 80}, 0, 0.85)`;
+        ctx.beginPath();
+        ctx.arc(effect.x, effect.y, effect.size, 0, Math.PI * 2);
+        ctx.fill();
+        if (effect.life <= 0 || effect.y < height * 0.18) {
+          backgroundFx.effects.splice(i, 1);
+        }
+        break;
+      case "fish":
+        effect.x += effect.vx;
+        ctx.fillStyle = `hsla(${effect.hue}, 92%, 68%, 0.8)`;
+        ctx.beginPath();
+        ctx.ellipse(effect.x, effect.y, effect.size, effect.size * 0.45, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(effect.x - effect.size, effect.y);
+        ctx.lineTo(effect.x - effect.size - 8, effect.y - 5);
+        ctx.lineTo(effect.x - effect.size - 8, effect.y + 5);
+        ctx.closePath();
+        ctx.fill();
+        if (effect.x > width + 30) {
+          backgroundFx.effects.splice(i, 1);
+        }
+        break;
+      case "butterfly": {
+        effect.x += effect.vx;
+        effect.t += 0.11;
+        const flutterY = effect.y + Math.sin(effect.t) * effect.amplitude;
+        ctx.fillStyle = "rgba(119, 196, 255, 0.82)";
+        ctx.fillRect(effect.x, flutterY, effect.size, effect.size);
+        ctx.fillStyle = "rgba(255, 233, 115, 0.72)";
+        ctx.fillRect(effect.x - 2, flutterY + 1, effect.size * 0.7, effect.size * 0.7);
+        if (effect.x > width + 20) {
+          backgroundFx.effects.splice(i, 1);
+        }
+        break;
+      }
+      case "drop":
+        effect.y += effect.vy;
+        ctx.fillStyle = "rgba(163, 228, 255, 0.82)";
+        ctx.fillRect(effect.x, effect.y, effect.size * 0.55, effect.size * 1.9);
+        if (effect.y > height) {
+          backgroundFx.effects.splice(i, 1);
+        }
+        break;
+      case "star":
+        effect.x += effect.vx;
+        effect.y += effect.vy;
+        ctx.strokeStyle = "rgba(255,255,255,0.9)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(effect.x, effect.y);
+        ctx.lineTo(effect.x + effect.tail, effect.y - effect.tail * 0.45);
+        ctx.stroke();
+        if (effect.x < -40 || effect.y > height + 30) {
+          backgroundFx.effects.splice(i, 1);
+        }
+        break;
+      case "lightning":
+        effect.life += 1;
+        ctx.strokeStyle = `rgba(255, 241, 132, ${0.9 - effect.life / (effect.duration + 2)})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(effect.x, 0);
+        ctx.lineTo(effect.x + effect.sway * 0.35, height * 0.22);
+        ctx.lineTo(effect.x - effect.sway * 0.2, height * 0.45);
+        ctx.lineTo(effect.x + effect.sway * 0.28, height * 0.72);
+        ctx.stroke();
+        if (effect.life > effect.duration) {
+          backgroundFx.effects.splice(i, 1);
+        }
+        break;
+      default:
+        backgroundFx.effects.splice(i, 1);
+        break;
+    }
+  }
+}
+
+function stepBackgroundEffects() {
+  const ctx = backgroundFx.ctx;
+  const canvas = els.backgroundCanvas;
+  if (!ctx || !canvas) return;
+  const width = canvas.clientWidth || window.innerWidth;
+  const height = canvas.clientHeight || window.innerHeight;
+  ctx.clearRect(0, 0, width, height);
+  drawBackgroundEffects(state.backgroundTheme, width, height);
+  backgroundFx.rafId = window.requestAnimationFrame(stepBackgroundEffects);
 }
 
 function chooseCharacter(characterId) {
@@ -1787,7 +2008,9 @@ els.backgroundSelect?.addEventListener("change", (event) => {
   const nextTheme = event.target.value;
   state.backgroundTheme = BACKGROUND_THEMES[nextTheme] ? nextTheme : "current";
   saveBackgroundPreference();
+  resetBackgroundEffects();
   renderHeader();
 });
 
+initBackgroundEffects();
 resetGame();
