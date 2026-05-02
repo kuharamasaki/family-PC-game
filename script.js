@@ -156,6 +156,9 @@ const SKILL_IDS = SKILLS.map((skill) => skill.id);
 validateMatchupTable();
 
 const BACKGROUND_THEMES = {
+  fusion: {
+    label: "合体世界",
+  },
   volcano: {
     label: "火山",
   },
@@ -207,7 +210,7 @@ const state = {
   winner: null,
   resolving: false,
   bgmTrack: "last-card",
-  backgroundTheme: "volcano",
+  backgroundTheme: "fusion",
   soundEnabled: true,
   resultReason: "勝負の決め手がここに出ます。",
 };
@@ -307,7 +310,7 @@ function resetGame() {
 }
 
 function themeHasAnimatedBackground(theme) {
-  return ["volcano", "underwater", "jungle", "cave", "space", "storm"].includes(theme);
+  return ["fusion", "volcano", "underwater", "jungle", "cave", "space", "storm"].includes(theme);
 }
 
 function resetBackgroundEffects() {
@@ -341,6 +344,13 @@ function initBackgroundEffects() {
 }
 
 function spawnBackgroundEffect(theme, width, height) {
+  if (theme === "fusion") {
+    const themes = ["volcano", "underwater", "jungle", "cave", "space", "storm"];
+    const nextTheme = themes[Math.floor(Math.random() * themes.length)];
+    spawnBackgroundEffect(nextTheme, width, height);
+    return;
+  }
+
   switch (theme) {
     case "volcano":
       backgroundFx.effects.push({
@@ -1465,9 +1475,9 @@ function loadModePreference() {
 function loadBackgroundPreference() {
   try {
     const saved = window.localStorage.getItem("deckBattleBackgroundTheme");
-    return saved && BACKGROUND_THEMES[saved] ? saved : "volcano";
+    return saved && BACKGROUND_THEMES[saved] ? saved : "fusion";
   } catch {
-    return "volcano";
+    return "fusion";
   }
 }
 
@@ -2000,7 +2010,7 @@ els.bgmSelect.addEventListener("change", (event) => {
 
 els.backgroundSelect?.addEventListener("change", (event) => {
   const nextTheme = event.target.value;
-  state.backgroundTheme = BACKGROUND_THEMES[nextTheme] ? nextTheme : "volcano";
+  state.backgroundTheme = BACKGROUND_THEMES[nextTheme] ? nextTheme : "fusion";
   saveBackgroundPreference();
   resetBackgroundEffects();
   renderHeader();
