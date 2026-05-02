@@ -2,8 +2,8 @@
   --bg-top: #071425;
   --bg-mid: #102445;
   --bg-bottom: #1d3658;
-  --panel: rgba(8, 18, 36, 0.72);
-  --panel-strong: rgba(12, 27, 53, 0.82);
+  --panel: rgba(8, 18, 36, 0.5);
+  --panel-strong: rgba(12, 27, 53, 0.62);
   --line: rgba(170, 214, 255, 0.12);
   --text: #eef6ff;
   --muted: #a9bfd9;
@@ -43,6 +43,7 @@ body::after {
   position: fixed;
   left: -10vw;
   width: 120vw;
+  opacity: 0.88;
   pointer-events: none;
   z-index: 0;
 }
@@ -62,8 +63,8 @@ body::after {
 }
 
 body[data-background="storybook"] {
-  --panel: rgba(16, 68, 56, 0.4);
-  --panel-strong: rgba(21, 86, 69, 0.5);
+  --panel: rgba(16, 68, 56, 0.26);
+  --panel-strong: rgba(21, 86, 69, 0.36);
   --line: rgba(231, 255, 208, 0.2);
   --text: #f8ffef;
   --muted: #d4ead1;
@@ -108,8 +109,8 @@ body[data-background="storybook"]::after {
 }
 
 body[data-background="volcano"] {
-  --panel: rgba(58, 18, 10, 0.48);
-  --panel-strong: rgba(86, 28, 14, 0.58);
+  --panel: rgba(58, 18, 10, 0.28);
+  --panel-strong: rgba(86, 28, 14, 0.38);
   --line: rgba(255, 186, 120, 0.22);
   --text: #fff4e8;
   --muted: #ffd6b5;
@@ -147,8 +148,8 @@ body[data-background="volcano"]::after {
 }
 
 body[data-background="underwater"] {
-  --panel: rgba(8, 42, 78, 0.46);
-  --panel-strong: rgba(8, 58, 104, 0.56);
+  --panel: rgba(8, 42, 78, 0.26);
+  --panel-strong: rgba(8, 58, 104, 0.36);
   --line: rgba(154, 224, 255, 0.2);
   --text: #f2fcff;
   --muted: #cdeefe;
@@ -187,8 +188,8 @@ body[data-background="underwater"]::after {
 }
 
 body[data-background="jungle"] {
-  --panel: rgba(20, 64, 28, 0.48);
-  --panel-strong: rgba(28, 88, 40, 0.58);
+  --panel: rgba(20, 64, 28, 0.28);
+  --panel-strong: rgba(28, 88, 40, 0.38);
   --line: rgba(204, 255, 165, 0.18);
   --text: #f6ffeb;
   --muted: #d7efc3;
@@ -226,8 +227,8 @@ body[data-background="jungle"]::after {
 }
 
 body[data-background="cave"] {
-  --panel: rgba(16, 22, 58, 0.54);
-  --panel-strong: rgba(18, 28, 74, 0.64);
+  --panel: rgba(16, 22, 58, 0.3);
+  --panel-strong: rgba(18, 28, 74, 0.4);
   --line: rgba(142, 170, 255, 0.22);
   --text: #eef2ff;
   --muted: #cdd6ff;
@@ -265,8 +266,8 @@ body[data-background="cave"]::after {
 }
 
 body[data-background="space"] {
-  --panel: rgba(20, 20, 76, 0.5);
-  --panel-strong: rgba(24, 27, 96, 0.6);
+  --panel: rgba(20, 20, 76, 0.28);
+  --panel-strong: rgba(24, 27, 96, 0.38);
   --line: rgba(186, 196, 255, 0.18);
   --text: #f4f4ff;
   --muted: #d4d8ff;
@@ -304,8 +305,8 @@ body[data-background="space"]::after {
 }
 
 body[data-background="storm"] {
-  --panel: rgba(28, 30, 54, 0.52);
-  --panel-strong: rgba(33, 35, 64, 0.62);
+  --panel: rgba(28, 30, 54, 0.3);
+  --panel-strong: rgba(33, 35, 64, 0.4);
   --line: rgba(210, 213, 255, 0.18);
   --text: #f4f5ff;
   --muted: #d6d8ef;
@@ -358,7 +359,7 @@ button {
   border: 1px solid var(--line);
   border-radius: 22px;
   background: var(--panel);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(7px);
   box-shadow: var(--shadow);
 }
 
@@ -437,7 +438,7 @@ p {
   padding: 12px 14px;
   border-radius: 16px;
   border: 1px solid rgba(185, 231, 255, 0.16);
-  background: rgba(6, 16, 32, 0.46);
+  background: rgba(6, 16, 32, 0.26);
 }
 
 .hp-card {
