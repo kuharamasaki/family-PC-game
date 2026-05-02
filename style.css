@@ -40,7 +40,7 @@ body {
   height: 100%;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.9;
+  opacity: 1;
 }
 
 body.screen-flash::before {
@@ -369,7 +369,7 @@ button {
   border: 1px solid var(--line);
   border-radius: 22px;
   background: var(--panel);
-  backdrop-filter: blur(7px);
+  backdrop-filter: blur(4px);
   box-shadow: var(--shadow);
 }
 
@@ -448,7 +448,7 @@ p {
   padding: 12px 14px;
   border-radius: 16px;
   border: 1px solid rgba(185, 231, 255, 0.16);
-  background: rgba(6, 16, 32, 0.26);
+  background: rgba(6, 16, 32, 0.18);
 }
 
 .hp-card {

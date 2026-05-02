@@ -156,12 +156,6 @@ const SKILL_IDS = SKILLS.map((skill) => skill.id);
 validateMatchupTable();
 
 const BACKGROUND_THEMES = {
-  current: {
-    label: "今の背景",
-  },
-  storybook: {
-    label: "森のバトル背景",
-  },
   volcano: {
     label: "火山",
   },
@@ -213,7 +207,7 @@ const state = {
   winner: null,
   resolving: false,
   bgmTrack: "last-card",
-  backgroundTheme: "current",
+  backgroundTheme: "volcano",
   soundEnabled: true,
   resultReason: "勝負の決め手がここに出ます。",
 };
@@ -1471,9 +1465,9 @@ function loadModePreference() {
 function loadBackgroundPreference() {
   try {
     const saved = window.localStorage.getItem("deckBattleBackgroundTheme");
-    return saved && BACKGROUND_THEMES[saved] ? saved : "current";
+    return saved && BACKGROUND_THEMES[saved] ? saved : "volcano";
   } catch {
-    return "current";
+    return "volcano";
   }
 }
 
@@ -2006,7 +2000,7 @@ els.bgmSelect.addEventListener("change", (event) => {
 
 els.backgroundSelect?.addEventListener("change", (event) => {
   const nextTheme = event.target.value;
-  state.backgroundTheme = BACKGROUND_THEMES[nextTheme] ? nextTheme : "current";
+  state.backgroundTheme = BACKGROUND_THEMES[nextTheme] ? nextTheme : "volcano";
   saveBackgroundPreference();
   resetBackgroundEffects();
   renderHeader();
