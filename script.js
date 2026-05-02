@@ -155,6 +155,33 @@ const MATCHUP_TABLE = {
 const SKILL_IDS = SKILLS.map((skill) => skill.id);
 validateMatchupTable();
 
+const BACKGROUND_THEMES = {
+  current: {
+    label: "今の背景",
+  },
+  storybook: {
+    label: "森のバトル背景",
+  },
+  volcano: {
+    label: "火山",
+  },
+  underwater: {
+    label: "水中",
+  },
+  jungle: {
+    label: "ジャングル",
+  },
+  cave: {
+    label: "洞窟",
+  },
+  space: {
+    label: "宇宙",
+  },
+  storm: {
+    label: "嵐",
+  },
+};
+
 const BGM_TRACKS = {
   "last-card": {
     label: "最後の一枚",
@@ -186,6 +213,7 @@ const state = {
   winner: null,
   resolving: false,
   bgmTrack: "last-card",
+  backgroundTheme: "current",
   soundEnabled: true,
   resultReason: "勝負の決め手がここに出ます。",
 };
@@ -223,6 +251,7 @@ const els = {
   cpuCard: document.querySelector(".hp-card.cpu"),
   modeSelect: document.querySelector("#modeSelect"),
   bgmSelect: document.querySelector("#bgmSelect"),
+  backgroundSelect: document.querySelector("#backgroundSelect"),
   soundButton: document.querySelector("#soundButton"),
   resetButton: document.querySelector("#resetButton"),
   characterTemplate: document.querySelector("#characterCardTemplate"),
@@ -250,6 +279,7 @@ const ANIMATION_CLASSES = [
 function resetGame() {
   state.soundEnabled = loadSoundPreference();
   state.bgmTrack = loadBgmPreference();
+  state.backgroundTheme = loadBackgroundPreference();
   state.mode = loadModePreference();
   state.phase = "character";
   state.playerCharacter = null;
@@ -1217,6 +1247,15 @@ function loadModePreference() {
   }
 }
 
+function loadBackgroundPreference() {
+  try {
+    const saved = window.localStorage.getItem("deckBattleBackgroundTheme");
+    return saved && BACKGROUND_THEMES[saved] ? saved : "current";
+  } catch {
+    return "current";
+  }
+}
+
 function saveSoundPreference() {
   try {
     window.localStorage.setItem("deckBattleSoundEnabled", String(state.soundEnabled));
@@ -1236,6 +1275,14 @@ function saveBgmPreference() {
 function saveModePreference() {
   try {
     window.localStorage.setItem("deckBattleMode", state.mode);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function saveBackgroundPreference() {
+  try {
+    window.localStorage.setItem("deckBattleBackgroundTheme", state.backgroundTheme);
   } catch {
     // Ignore storage failures.
   }
@@ -1430,6 +1477,7 @@ function render() {
 function renderHeader() {
   const playerMax = state.playerCharacter ? state.playerCharacter.hp : MAX_HP;
   const cpuMax = state.cpuCharacter ? state.cpuCharacter.hp : MAX_HP;
+  els.body.dataset.background = state.backgroundTheme;
   els.playerName.textContent = state.playerCharacter ? state.playerCharacter.name : "PLAYER";
   els.cpuName.textContent = state.cpuCharacter ? state.cpuCharacter.name : state.mode === "pvp" ? "PLAYER 2" : "CPU";
   els.playerHp.textContent = `${state.playerHp} / ${playerMax}`;
@@ -1443,6 +1491,11 @@ function renderHeader() {
   els.cpuCard.dataset.character = state.cpuCharacter?.id ?? "neutral";
   els.playerAvatar.dataset.character = state.playerCharacter?.id ?? "neutral";
   els.cpuAvatar.dataset.character = state.cpuCharacter?.id ?? "neutral";
+  els.modeSelect.value = state.mode;
+  els.bgmSelect.value = state.bgmTrack;
+  if (els.backgroundSelect) {
+    els.backgroundSelect.value = state.backgroundTheme;
+  }
   setAvatarImage(els.playerAvatarImg, state.playerCharacter);
   setAvatarImage(els.cpuAvatarImg, state.cpuCharacter);
   updateResultOverlay();
@@ -1727,6 +1780,13 @@ els.bgmSelect.addEventListener("change", (event) => {
     stopBgm();
     startBgmLoop();
   }
+  renderHeader();
+});
+
+els.backgroundSelect?.addEventListener("change", (event) => {
+  const nextTheme = event.target.value;
+  state.backgroundTheme = BACKGROUND_THEMES[nextTheme] ? nextTheme : "current";
+  saveBackgroundPreference();
   renderHeader();
 });
 

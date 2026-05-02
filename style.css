@@ -61,6 +61,285 @@ body::after {
     radial-gradient(ellipse at 50% 100%, rgba(14, 29, 52, 0.95), transparent 62%);
 }
 
+body[data-background="storybook"] {
+  --panel: rgba(16, 68, 56, 0.4);
+  --panel-strong: rgba(21, 86, 69, 0.5);
+  --line: rgba(231, 255, 208, 0.2);
+  --text: #f8ffef;
+  --muted: #d4ead1;
+  --accent: #8dddff;
+  --accent-strong: #fff0a8;
+  --gold: #ffe37d;
+  background:
+    radial-gradient(circle at 20% 16%, rgba(255,255,255,0.88) 0 3.4%, transparent 3.8%),
+    radial-gradient(circle at 26% 18%, rgba(255,255,255,0.82) 0 2.8%, transparent 3.2%),
+    radial-gradient(circle at 32% 16%, rgba(255,255,255,0.84) 0 3.2%, transparent 3.6%),
+    radial-gradient(circle at 64% 12%, rgba(255,255,255,0.9) 0 4.4%, transparent 4.8%),
+    radial-gradient(circle at 70% 14%, rgba(255,255,255,0.82) 0 3.1%, transparent 3.5%),
+    radial-gradient(circle at 75% 12%, rgba(255,255,255,0.84) 0 4%, transparent 4.4%),
+    radial-gradient(circle at 50% 58%, rgba(255, 232, 159, 0.98) 0 12%, transparent 12.6%),
+    radial-gradient(circle at 50% 58%, rgba(220, 180, 95, 0.84) 12.5%, transparent 17%),
+    linear-gradient(180deg, #41bfff 0%, #87e7ff 34%, #7dce77 70%, #59aa4d 100%);
+}
+
+body[data-background="storybook"]::before {
+  left: 0;
+  width: 100vw;
+  bottom: 0;
+  height: 42vh;
+  background:
+    radial-gradient(circle at 50% 76%, rgba(244, 220, 150, 0.98) 0 19%, rgba(212, 171, 92, 0.94) 19.4%, transparent 24%),
+    radial-gradient(circle at 18% 100%, rgba(42, 135, 58, 0.95) 0 34%, transparent 35%),
+    radial-gradient(circle at 82% 100%, rgba(40, 126, 54, 0.95) 0 33%, transparent 34%),
+    radial-gradient(circle at 50% 100%, rgba(54, 150, 70, 0.96) 0 40%, transparent 41%);
+}
+
+body[data-background="storybook"]::after {
+  left: 0;
+  width: 100vw;
+  bottom: 48vh;
+  height: 52vh;
+  background:
+    radial-gradient(circle at 5% 8%, rgba(138, 203, 73, 0.96) 0 12%, transparent 12.4%),
+    radial-gradient(circle at 18% 2%, rgba(118, 182, 61, 0.96) 0 14%, transparent 14.4%),
+    radial-gradient(circle at 95% 10%, rgba(138, 203, 73, 0.96) 0 12%, transparent 12.4%),
+    radial-gradient(circle at 82% 2%, rgba(118, 182, 61, 0.96) 0 14%, transparent 14.4%),
+    linear-gradient(180deg, rgba(27, 96, 42, 0.58), transparent 34%);
+}
+
+body[data-background="volcano"] {
+  --panel: rgba(58, 18, 10, 0.48);
+  --panel-strong: rgba(86, 28, 14, 0.58);
+  --line: rgba(255, 186, 120, 0.22);
+  --text: #fff4e8;
+  --muted: #ffd6b5;
+  --accent: #ffb05e;
+  --accent-strong: #fff2b8;
+  --gold: #ffd36a;
+  background:
+    radial-gradient(circle at 50% 24%, rgba(255, 220, 120, 0.95) 0 3.5%, transparent 6%),
+    radial-gradient(circle at 50% 28%, rgba(255, 142, 0, 0.92) 0 11%, transparent 12%),
+    linear-gradient(180deg, #4b140b 0%, #b33a17 28%, #ff7b1f 58%, #2a120d 100%);
+}
+
+body[data-background="volcano"]::before {
+  left: 0;
+  width: 100vw;
+  bottom: 0;
+  height: 44vh;
+  background:
+    linear-gradient(180deg, transparent 0 58%, rgba(255, 98, 0, 0.75) 58% 61%, transparent 61%),
+    radial-gradient(circle at 50% 100%, rgba(34, 16, 12, 0.98) 0 44%, transparent 45%),
+    radial-gradient(circle at 28% 100%, rgba(50, 24, 18, 0.96) 0 28%, transparent 29%),
+    radial-gradient(circle at 72% 100%, rgba(50, 24, 18, 0.96) 0 28%, transparent 29%);
+}
+
+body[data-background="volcano"]::after {
+  left: 20vw;
+  width: 60vw;
+  bottom: 34vh;
+  height: 42vh;
+  background:
+    linear-gradient(180deg, rgba(255, 179, 74, 0.95), rgba(255, 89, 0, 0.1) 28%, transparent 29%),
+    linear-gradient(135deg, transparent 0 48%, rgba(51, 20, 13, 0.98) 49%),
+    linear-gradient(225deg, transparent 0 48%, rgba(51, 20, 13, 0.98) 49%);
+  clip-path: polygon(50% 6%, 86% 100%, 14% 100%);
+}
+
+body[data-background="underwater"] {
+  --panel: rgba(8, 42, 78, 0.46);
+  --panel-strong: rgba(8, 58, 104, 0.56);
+  --line: rgba(154, 224, 255, 0.2);
+  --text: #f2fcff;
+  --muted: #cdeefe;
+  --accent: #78e8ff;
+  --accent-strong: #c6f7ff;
+  --gold: #ffdf83;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.85), transparent 18%),
+    repeating-radial-gradient(circle at 50% 0%, rgba(255,255,255,0.08) 0 1.2%, transparent 1.2% 4%),
+    linear-gradient(180deg, #67d4ff 0%, #0f6fc6 35%, #063e7d 100%);
+}
+
+body[data-background="underwater"]::before {
+  left: 0;
+  width: 100vw;
+  bottom: 0;
+  height: 42vh;
+  background:
+    radial-gradient(circle at 50% 90%, rgba(241, 220, 169, 0.96) 0 20%, transparent 21%),
+    radial-gradient(circle at 15% 100%, rgba(84, 59, 121, 0.7) 0 20%, transparent 21%),
+    radial-gradient(circle at 85% 100%, rgba(148, 69, 108, 0.7) 0 18%, transparent 19%),
+    linear-gradient(180deg, transparent 0 40%, rgba(14, 72, 131, 0.5) 40%, rgba(12, 49, 96, 0.92) 100%);
+}
+
+body[data-background="underwater"]::after {
+  left: 0;
+  width: 100vw;
+  bottom: 18vh;
+  height: 52vh;
+  background:
+    radial-gradient(circle at 10% 85%, rgba(255,255,255,0.16) 0 0.6%, transparent 0.8%),
+    radial-gradient(circle at 16% 78%, rgba(255,255,255,0.16) 0 0.8%, transparent 1%),
+    radial-gradient(circle at 84% 74%, rgba(255,255,255,0.16) 0 0.7%, transparent 0.9%),
+    radial-gradient(circle at 62% 65%, rgba(255,255,255,0.14) 0 0.6%, transparent 0.8%),
+    linear-gradient(180deg, rgba(255,255,255,0.2), transparent 25%);
+}
+
+body[data-background="jungle"] {
+  --panel: rgba(20, 64, 28, 0.48);
+  --panel-strong: rgba(28, 88, 40, 0.58);
+  --line: rgba(204, 255, 165, 0.18);
+  --text: #f6ffeb;
+  --muted: #d7efc3;
+  --accent: #c6ff7a;
+  --accent-strong: #fff4a8;
+  --gold: #ffe17a;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(244, 255, 192, 0.52) 0 10%, transparent 22%),
+    linear-gradient(180deg, #4b8f34 0%, #2f6d28 34%, #193e1c 100%);
+}
+
+body[data-background="jungle"]::before {
+  left: 0;
+  width: 100vw;
+  bottom: 0;
+  height: 42vh;
+  background:
+    radial-gradient(circle at 50% 82%, rgba(231, 214, 149, 0.96) 0 18%, transparent 19%),
+    radial-gradient(circle at 16% 100%, rgba(24, 71, 24, 0.98) 0 34%, transparent 35%),
+    radial-gradient(circle at 84% 100%, rgba(24, 71, 24, 0.98) 0 34%, transparent 35%),
+    radial-gradient(circle at 50% 100%, rgba(38, 100, 41, 0.94) 0 42%, transparent 43%);
+}
+
+body[data-background="jungle"]::after {
+  left: 0;
+  width: 100vw;
+  bottom: 48vh;
+  height: 52vh;
+  background:
+    radial-gradient(circle at 8% 6%, rgba(80, 148, 42, 0.98) 0 14%, transparent 14.5%),
+    radial-gradient(circle at 24% 2%, rgba(45, 108, 33, 0.98) 0 17%, transparent 17.5%),
+    radial-gradient(circle at 92% 8%, rgba(80, 148, 42, 0.98) 0 14%, transparent 14.5%),
+    radial-gradient(circle at 76% 2%, rgba(45, 108, 33, 0.98) 0 17%, transparent 17.5%),
+    linear-gradient(180deg, rgba(20, 68, 26, 0.72), transparent 34%);
+}
+
+body[data-background="cave"] {
+  --panel: rgba(16, 22, 58, 0.54);
+  --panel-strong: rgba(18, 28, 74, 0.64);
+  --line: rgba(142, 170, 255, 0.22);
+  --text: #eef2ff;
+  --muted: #cdd6ff;
+  --accent: #77baff;
+  --accent-strong: #98e5ff;
+  --gold: #f6db7d;
+  background:
+    radial-gradient(circle at 50% 12%, rgba(103, 174, 255, 0.35) 0 8%, transparent 20%),
+    linear-gradient(180deg, #0e1434 0%, #111a45 42%, #071020 100%);
+}
+
+body[data-background="cave"]::before {
+  left: 0;
+  width: 100vw;
+  bottom: 0;
+  height: 44vh;
+  background:
+    radial-gradient(circle at 50% 84%, rgba(100, 190, 255, 0.22) 0 3%, transparent 10%),
+    radial-gradient(circle at 50% 92%, rgba(16, 22, 38, 0.98) 0 40%, transparent 41%),
+    radial-gradient(circle at 24% 100%, rgba(24, 30, 52, 0.98) 0 26%, transparent 27%),
+    radial-gradient(circle at 76% 100%, rgba(24, 30, 52, 0.98) 0 26%, transparent 27%);
+}
+
+body[data-background="cave"]::after {
+  left: 0;
+  width: 100vw;
+  bottom: 50vh;
+  height: 50vh;
+  background:
+    radial-gradient(circle at 18% 58%, rgba(68, 162, 255, 0.7) 0 1.2%, transparent 3.8%),
+    radial-gradient(circle at 32% 70%, rgba(68, 162, 255, 0.72) 0 1%, transparent 3.4%),
+    radial-gradient(circle at 70% 62%, rgba(68, 162, 255, 0.76) 0 1.1%, transparent 3.6%),
+    radial-gradient(circle at 84% 52%, rgba(68, 162, 255, 0.74) 0 1.2%, transparent 3.8%),
+    linear-gradient(180deg, rgba(5, 10, 22, 0.88), transparent 26%);
+}
+
+body[data-background="space"] {
+  --panel: rgba(20, 20, 76, 0.5);
+  --panel-strong: rgba(24, 27, 96, 0.6);
+  --line: rgba(186, 196, 255, 0.18);
+  --text: #f4f4ff;
+  --muted: #d4d8ff;
+  --accent: #8ec1ff;
+  --accent-strong: #f8f0a8;
+  --gold: #ffd86e;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(176, 112, 255, 0.28) 0 6%, transparent 18%),
+    radial-gradient(circle at 80% 16%, rgba(114, 184, 255, 0.25) 0 8%, transparent 20%),
+    radial-gradient(circle at 75% 10%, rgba(255,255,255,0.95) 0 0.35%, transparent 0.8%),
+    radial-gradient(circle at 28% 18%, rgba(255,255,255,0.92) 0 0.3%, transparent 0.7%),
+    radial-gradient(circle at 62% 30%, rgba(255,255,255,0.88) 0 0.28%, transparent 0.7%),
+    linear-gradient(180deg, #07103a 0%, #11156a 45%, #060814 100%);
+}
+
+body[data-background="space"]::before {
+  left: 0;
+  width: 100vw;
+  bottom: 0;
+  height: 42vh;
+  background:
+    radial-gradient(circle at 50% 84%, rgba(196, 201, 212, 0.98) 0 18%, transparent 19%),
+    linear-gradient(180deg, transparent 0 64%, rgba(76, 80, 98, 0.95) 64%, rgba(42, 45, 58, 0.98) 100%);
+}
+
+body[data-background="space"]::after {
+  left: 60vw;
+  width: 28vw;
+  bottom: 58vh;
+  height: 28vw;
+  max-height: 240px;
+  background:
+    radial-gradient(circle at 35% 35%, rgba(179, 224, 255, 0.95) 0 10%, rgba(40, 103, 188, 0.96) 32%, rgba(15, 36, 85, 0.98) 60%, transparent 61%);
+  border-radius: 50%;
+}
+
+body[data-background="storm"] {
+  --panel: rgba(28, 30, 54, 0.52);
+  --panel-strong: rgba(33, 35, 64, 0.62);
+  --line: rgba(210, 213, 255, 0.18);
+  --text: #f4f5ff;
+  --muted: #d6d8ef;
+  --accent: #b3baff;
+  --accent-strong: #ffe48d;
+  --gold: #ffd96c;
+  background:
+    radial-gradient(circle at 50% 12%, rgba(255,255,255,0.18) 0 8%, transparent 20%),
+    linear-gradient(180deg, #242a3f 0%, #434a63 42%, #171c2d 100%);
+}
+
+body[data-background="storm"]::before {
+  left: 0;
+  width: 100vw;
+  bottom: 0;
+  height: 40vh;
+  background:
+    radial-gradient(circle at 24% 90%, rgba(230, 235, 244, 0.95) 0 14%, transparent 15%),
+    radial-gradient(circle at 50% 88%, rgba(230, 235, 244, 0.95) 0 18%, transparent 19%),
+    radial-gradient(circle at 76% 90%, rgba(230, 235, 244, 0.95) 0 14%, transparent 15%),
+    linear-gradient(180deg, transparent 0 58%, rgba(18, 22, 36, 0.78) 58%, rgba(12, 15, 24, 0.92) 100%);
+}
+
+body[data-background="storm"]::after {
+  left: 0;
+  width: 100vw;
+  bottom: 44vh;
+  height: 56vh;
+  background:
+    linear-gradient(115deg, transparent 0 29%, rgba(255,255,255,0.9) 29.4%, transparent 30.6%, transparent 100%),
+    linear-gradient(250deg, transparent 0 72%, rgba(255,255,255,0.82) 72.4%, transparent 73.4%, transparent 100%),
+    linear-gradient(180deg, rgba(255,255,255,0.08), transparent 22%);
+}
+
 button {
   font: inherit;
 }
